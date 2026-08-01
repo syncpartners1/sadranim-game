@@ -27,7 +27,7 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
   const isHumanWinReady = checkWin(humanPlayer, state);
 
   const phaseInstructions: Record<ActionPhase, string> = {
-    IDLE: 'שלוף אריח מהקופה או מההשלכות של השכן',
+    IDLE: 'שלוף אריח מהקופה או מההשלכות של השכן 1',
     TILE_DRAWN: drawnFromDiscard
       ? 'לקחת אריח מהשכן — חובה להניח אותו במדף!'
       : 'הנח במדף שלך או זרוק להשלכות',
@@ -53,9 +53,9 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
         <AnimatePresence mode="wait">
           <motion.div
             key={actionPhase + (drawnFromDiscard ? '-discard' : '')}
-            initial={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
+            exit={{ opacity: 0, y: 4 }}
             className={`
               text-xs font-semibold px-3 py-1.5 rounded-full flex-1 text-center
               ${actionPhase === 'IDLE' ? 'bg-white/10 text-white/60' : 'bg-yellow-500/20 text-yellow-300'}
@@ -98,19 +98,11 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
         {drawnTile && (
           <div className="flex flex-col items-center gap-1">
             <span className="text-white/50 text-xs">
-              {drawnFromDiscard ? 'אריח שנלקח מהשכן' : 'אריח שנשלף'}
+              {drawnFromDiscard ? 'אריח שנלקח מהשכן 1' : 'אריח שנשלף'}
             </span>
-            <AnimatePresence>
-              <motion.div
-                key={drawnTile.id}
-                initial={{ y: -40, rotate: -15, opacity: 0 }}
-                animate={{ y: 0, rotate: 0, opacity: 1 }}
-                exit={{ scale: 0, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              >
-                <TileComponent tile={drawnTile} size="lg" selected />
-              </motion.div>
-            </AnimatePresence>
+            <div key={drawnTile.id} className="inline-block">
+              <TileComponent tile={drawnTile} size="lg" selected />
+            </div>
             <span className="text-white/70 text-xs font-medium">{drawnTile.nameHe}</span>
           </div>
         )}

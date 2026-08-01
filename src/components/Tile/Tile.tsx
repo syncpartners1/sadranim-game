@@ -26,7 +26,6 @@ const tileTypeColors: Record<string, string> = {
   SALE: 'ring-2 ring-red-400 shadow-red-400/40',
   SWITCH: 'ring-2 ring-blue-400 shadow-blue-400/40',
   PUSH: 'ring-2 ring-orange-400 shadow-orange-400/40',
-  STEAL: 'ring-2 ring-yellow-400 shadow-yellow-400/40',
 };
 
 export const TileComponent: React.FC<TileProps> = ({
@@ -61,19 +60,15 @@ export const TileComponent: React.FC<TileProps> = ({
           ${specialRing}
           ${isPushPlaceholder ? 'opacity-60 animate-pulse' : ''}
           ${onClick || draggable ? 'hover:scale-105 active:scale-95' : ''}
-          transition-all duration-150
+          transition-transform duration-150
         `}
         onClick={onClick}
         whileHover={onClick || draggable ? { scale: 1.08 } : {}}
         whileTap={onClick || draggable ? { scale: 0.95 } : {}}
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.8 }}
-        layout
       >
         <img
           src={`/assets/chits/${tile.imageFile}`}
-          alt={tile.name}
+          alt={tile.nameHe || tile.name}
           className="w-full h-full object-contain bg-white/5"
           draggable={false}
         />
