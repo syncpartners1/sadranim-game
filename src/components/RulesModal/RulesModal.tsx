@@ -53,18 +53,17 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                   <strong className="text-white">הנחה או זריקה:</strong> הנח את האריח שנשלף בתוך משבצת במדף שלך, או לחץ על "לזרוק להשלכות".
                 </li>
                 <li>
-                  <strong className="text-white">סידור חופשי במדף (Drag & Drop):**</strong> ניתן לגרור או ללחוץ על 2 אריחים במדף שלך בכל עת כדי להחליף מיקומים <strong className="text-yellow-300">ללא איבוד תור!</strong>
+                  <strong className="text-white">סידור חופשי במדף (Drag & Drop):</strong> ניתן לגרור או ללחוץ על 2 אריחים במדף שלך בכל עת כדי להחליף מיקומים <strong className="text-yellow-300">ללא איבוד תור!</strong>
                 </li>
               </ol>
             </div>
 
             {/* Special Tiles */}
             <div className="bg-white/5 p-3 rounded-2xl border border-white/10 space-y-2">
-              <h3 className="font-bold text-sm text-yellow-300">✨ אריחים מיוחדים:</h3>
+              <h3 className="font-bold text-sm text-yellow-300">✨ אריחים מיוחדים (3 סוגים):</h3>
               <ul className="space-y-1 text-white/90">
                 <li>🔴 <strong className="text-orange-300">Push (דחיפה):</strong> דוחף אריח ממדף שכן לערמת ההשלכות שלו ומציב אריח דחיפה זמני שעל השכן להחליף בתורו.</li>
                 <li>🔵 <strong className="text-blue-300">Switch (החלפה):</strong> החלפה מיידית בין אריח מהמדף שלך לבין אריח במדף יריב.</li>
-                <li>💛 <strong className="text-yellow-300">Steal (גניבה):</strong> גניבת אריח ממדף יריב אל המדף שלך.</li>
                 <li>⭐ <strong className="text-emerald-300">Sale (מבצע):</strong> ג'וקר המשמש ככל מוצר חסר (מותר לכל היותר אריח מבצע 1 למדף).</li>
               </ul>
             </div>

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { GameState, GameSettings, ActionPhase } from '../types/game';
-import { setupGame, drawFromPool, drawFromNeighbourDiscard, placeTileOnShelf, discardDrawnTile, executeSwitchAction, executeStealAction, executePushAction, startNextRound, swapOwnShelfSlots, claimWin as claimWinEngine, convertHumanToAI } from '../engine/gameEngine';
+import { setupGame, drawFromPool, drawFromNeighbourDiscard, placeTileOnShelf, discardDrawnTile, executeSwitchAction, executePushAction, startNextRound, swapOwnShelfSlots, claimWin as claimWinEngine, convertHumanToAI } from '../engine/gameEngine';
 import { aiTakeTurn } from '../engine/aiPlayer';
 import { saveRoomStateToFirestore, subscribeToRoomFirestore, fetchRoomStateFromFirestore } from '../services/roomSync';
 
@@ -21,7 +21,6 @@ interface GameStore {
   selectOwnSlot: (slot: number) => void;
   selectTargetSlot: (playerId: string, slot: number) => void;
   confirmSwitch: () => void;
-  confirmSteal: (ownSlot: number) => void;
   confirmPush: () => void;
   continueAfterRound: () => void;
   resetGame: () => void;
@@ -142,17 +141,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     scheduleAI(s, set, get);
   },
 
-  confirmSteal: (ownSlot) => {
-    const { state } = get();
-    if (!state) return;
-    const { selectedTargetPlayerId: p, selectedTargetSlot: t } = state;
-    if (!p || t === null) return;
-    const s = executeStealAction(state, p, t, ownSlot);
-    set({ state: s });
-    saveRoomStateToFirestore(s);
-    scheduleAI(s, set, get);
-  },
-
   confirmPush: () => {
     const { state } = get();
     if (!state) return;
@@ -200,7 +188,6 @@ function setupFirestoreSubscription(roomCode: string, set: any, get: any) {
   if (unsubscribeRoom) unsubscribeRoom();
   unsubscribeRoom = subscribeToRoomFirestore(roomCode, (newState) => {
     const current = get().state;
-    // Guard against stale Firestore snapshot overwriting fresh in-memory drawn tile / action
     if (current && current.drawnTile && !newState.drawnTile && current.currentTurnIndex === newState.currentTurnIndex) {
       return;
     }

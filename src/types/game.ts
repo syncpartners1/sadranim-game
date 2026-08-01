@@ -12,7 +12,7 @@ export type ProductId =
   | 'chips'
   | 'pringles';
 
-export type SpecialTileType = 'SALE' | 'SWITCH' | 'PUSH' | 'STEAL';
+export type SpecialTileType = 'SALE' | 'SWITCH' | 'PUSH';
 export type TileType = 'PRODUCT' | SpecialTileType;
 
 export interface Tile {
@@ -56,13 +56,12 @@ export type ActionPhase =
   | 'TILE_DRAWN'        // normal tile drawn, waiting for place/discard decision
   | 'SWITCH_SELECT_OWN' // SWITCH drawn: pick your tile to swap
   | 'SWITCH_SELECT_TARGET' // pick opponent + their tile
-  | 'STEAL_SELECT_TARGET'  // STEAL drawn: pick opponent + their tile to steal
   | 'PUSH_SELECT_TARGET'   // PUSH drawn: pick adjacent opponent's tile to push
   | 'PUSH_RESOLVE'         // this player must replace the PUSH placeholder on their shelf
 
 export interface GameState {
   gameId: string;
-  roomCode: string;             // 5-character invite code (e.g. "SADR8")
+  roomCode: string;             // 5-character invite code
   players: Player[];
   currentTurnIndex: number;
   drawPool: Tile[];
@@ -73,12 +72,11 @@ export interface GameState {
   roundNumber: number;
   winnerId: string | null;       // round winner
   overallWinnerId: string | null; // game winner
-  drawnTile: Tile | null;        // tile currently in hand (not yet placed/discarded)
+  drawnTile: Tile | null;        // tile currently in hand
   drawnFromDiscard?: boolean;    // true when tile was drawn from neighbour's discard
   actionPhase: ActionPhase;
-  // Turn timestamp for 5-min AFK timeout
   turnStartTimestamp: number;
-  // For switch/steal/push — which slots are selected
+  // For switch/push — which slots are selected
   selectedOwnSlot: number | null;
   selectedTargetPlayerId: string | null;
   selectedTargetSlot: number | null;
@@ -90,7 +88,7 @@ export interface GameState {
 
 export interface GameSettings {
   playerCount: number;      // 2-4
-  humanCount: number;       // 1 = single player vs AI, 2-4 = online multiplayer / pass & play
+  humanCount: number;       // 1 = single player vs AI, 2-4 = online multiplayer
   aiLevel: AILevel;
   useTelegramNames: boolean;
   roomCode?: string;

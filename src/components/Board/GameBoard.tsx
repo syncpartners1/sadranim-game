@@ -48,7 +48,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
   const canPlace = isHumanTurn && (actionPhase === 'TILE_DRAWN' || actionPhase === 'PUSH_RESOLVE');
 
   const adjacentIdxs = getAdjacentPlayerIndices(state);
-  const canTargetAll = actionPhase === 'SWITCH_SELECT_TARGET' || actionPhase === 'STEAL_SELECT_TARGET';
+  const canTargetAll = actionPhase === 'SWITCH_SELECT_TARGET';
   const canTargetAdjacent = actionPhase === 'PUSH_SELECT_TARGET';
 
   function isPlayerTargetable(playerIndex: number): boolean {

@@ -13,12 +13,10 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
   const {
     discardTile,
     confirmSwitch,
-    confirmSteal,
     confirmPush,
     claimWin,
   } = useGameStore();
 
-  const [, setStealOwnSlot] = useState<number | null>(null);
   const [claimFeedback, setClaimFeedback] = useState<string | null>(null);
 
   const currentPlayer = state.players[state.currentTurnIndex];
@@ -34,8 +32,7 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
       ? 'לקחת אריח מהשכן — חובה להניח אותו במדף!'
       : 'הנח במדף שלך או זרוק להשלכות',
     SWITCH_SELECT_OWN: 'בחר אריח מהמדף שלך להחלפה',
-    SWITCH_SELECT_TARGET: 'בחר אריח מתוך מדף של יריב',
-    STEAL_SELECT_TARGET: 'בחר אריח ממדף יריב לגניבה',
+    SWITCH_SELECT_TARGET: 'בחר אריח מתוך מדף של יריב להחלפה',
     PUSH_SELECT_TARGET: 'בחר אריח ממדף שכן לדחיפה',
     PUSH_RESOLVE: 'נסחפת! השתמש באריח שנשלף כדי למלא את המשבצת',
   };
@@ -158,31 +155,6 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
                   >
                     ↔ אישור החלפה
                   </button>
-                )}
-              </>
-            )}
-
-            {actionPhase === 'STEAL_SELECT_TARGET' && (
-              <>
-                <p className="text-yellow-300 text-xs text-center">לחץ על אריח היריב לגניבה</p>
-                {selectedTargetPlayerId && selectedTargetSlot !== null && (
-                  <div className="flex flex-col gap-1 items-center">
-                    <p className="text-yellow-300 text-xs text-center">בחר את המשבצת שלך להחלפה:</p>
-                    <div className="grid grid-cols-4 gap-1">
-                      {currentPlayer.shelf.map((_, i) => (
-                        <button
-                          key={i}
-                          onClick={() => {
-                            setStealOwnSlot(i);
-                            confirmSteal(i);
-                          }}
-                          className="w-8 h-8 bg-white/10 hover:bg-yellow-400/30 rounded text-xs text-white/70 border border-white/20 font-bold"
-                        >
-                          {i + 1}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 )}
               </>
             )}

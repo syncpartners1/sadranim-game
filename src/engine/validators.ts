@@ -16,8 +16,8 @@ export function checkWin(player: Player, _state?: GameState): boolean {
 
   const shelfTiles = shelf as Tile[];
 
-  // Action tiles (SWITCH, STEAL, PUSH) cannot remain on shelf
-  if (shelfTiles.some(t => t.type === 'SWITCH' || t.type === 'STEAL' || t.type === 'PUSH')) {
+  // Action tiles (SWITCH, PUSH) cannot remain on shelf
+  if (shelfTiles.some(t => t.type === 'SWITCH' || t.type === 'PUSH')) {
     return false;
   }
 

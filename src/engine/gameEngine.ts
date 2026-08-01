@@ -42,7 +42,7 @@ export function setupGame(settings: GameSettings): GameState {
     const shelf: (Tile | null)[] = [];
     while (shelf.length < 8) {
       const tile = drawPool.pop()!;
-      if (tile.type === 'PUSH' || tile.type === 'SWITCH' || tile.type === 'STEAL') {
+      if (tile.type === 'PUSH' || tile.type === 'SWITCH') {
         drawPool.unshift(tile);
       } else {
         shelf.push({ ...tile });
@@ -117,8 +117,6 @@ export function drawFromPool(state: GameState): GameState {
     actionPhase = 'PUSH_RESOLVE';
   } else if (tile.type === 'SWITCH') {
     actionPhase = 'SWITCH_SELECT_OWN';
-  } else if (tile.type === 'STEAL') {
-    actionPhase = 'STEAL_SELECT_TARGET';
   } else if (tile.type === 'PUSH') {
     actionPhase = 'PUSH_SELECT_TARGET';
   }
@@ -146,7 +144,6 @@ export function drawFromNeighbourDiscard(state: GameState): GameState {
   let actionPhase: ActionPhase = 'TILE_DRAWN';
   if (currentPlayer.hasPushPlaceholder) actionPhase = 'PUSH_RESOLVE';
   else if (tile.type === 'SWITCH') actionPhase = 'SWITCH_SELECT_OWN';
-  else if (tile.type === 'STEAL') actionPhase = 'STEAL_SELECT_TARGET';
   else if (tile.type === 'PUSH') actionPhase = 'PUSH_SELECT_TARGET';
 
   return checkAnyPlayerWin({
@@ -261,38 +258,6 @@ export function executeSwitchAction(state: GameState, ownSlot: number, targetId:
   });
 }
 
-export function executeStealAction(state: GameState, targetId: string, targetSlot: number, ownSlot: number): GameState {
-  const players = state.players.map(p => ({ ...p, shelf: [...p.shelf], discardPile: [...p.discardPile] }));
-  const cur = players[state.currentTurnIndex];
-  const tIdx = players.findIndex(p => p.id === targetId);
-  if (tIdx < 0) return state;
-  const tgt = players[tIdx];
-  const stolen = tgt.shelf[targetSlot];
-  if (!stolen) return state;
-
-  if (stolen.type === 'SALE' && cur.shelf.some((t, idx) => idx !== ownSlot && t?.type === 'SALE')) {
-    return state;
-  }
-
-  const displaced = cur.shelf[ownSlot];
-  cur.shelf[ownSlot] = { ...stolen };
-  tgt.shelf[targetSlot] = null;
-  if (displaced) cur.discardPile = [{ ...displaced }, ...cur.discardPile];
-  players[state.currentTurnIndex] = cur;
-  players[tIdx] = tgt;
-  return checkAndAdvance({
-    ...state,
-    players,
-    drawnTile: null,
-    drawnFromDiscard: false,
-    actionPhase: 'IDLE' as ActionPhase,
-    selectedOwnSlot: null,
-    selectedTargetPlayerId: null,
-    selectedTargetSlot: null,
-    lastAction: 'steal'
-  });
-}
-
 export function executePushAction(state: GameState, targetId: string, targetSlot: number): GameState {
   const players = state.players.map(p => ({ ...p, shelf: [...p.shelf], discardPile: [...p.discardPile] }));
   const tIdx = players.findIndex(p => p.id === targetId);
@@ -383,7 +348,7 @@ function endRound(state: GameState, winnerId: string): GameState {
     const shelf: (Tile | null)[] = [];
     while (shelf.length < 8 && drawPool.length > 0) {
       const tile = drawPool.pop()!;
-      if (tile.type === 'PUSH' || tile.type === 'SWITCH' || tile.type === 'STEAL') {
+      if (tile.type === 'PUSH' || tile.type === 'SWITCH') {
         drawPool.unshift(tile);
       } else {
         shelf.push({ ...tile });
