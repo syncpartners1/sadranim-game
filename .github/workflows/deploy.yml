@@ -25,20 +25,33 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Deploy to Firebase Hosting
+      - name: Authenticate & Deploy to Firebase Hosting using GCP Secret Manager
         env:
           KEY_1: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SADRANIM_GAME }}
           KEY_2: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           KEY_3: ${{ secrets.GCP_SA_KEY }}
-          KEY_4: ${{ secrets.FIREBASE_TOKEN }}
         run: |
-          SA_KEY="${KEY_1:-${KEY_2:-${KEY_3:-$KEY_4}}}"
-          if [ -z "$SA_KEY" ]; then
-            echo "::error::No Firebase secret found in GitHub Secrets. Please add FIREBASE_SERVICE_ACCOUNT_SADRANIM_GAME to Repository Settings -> Secrets and variables -> Actions."
-            exit 1
+          # 1. Setup fallback key from GitHub Secrets
+          FALLBACK_KEY="${KEY_1:-${KEY_2:-$KEY_3}}"
+          if [ -n "$FALLBACK_KEY" ]; then
+            printf '%s\n' "$FALLBACK_KEY" > ./sa-key-deploy.json
+            export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/sa-key-deploy.json"
           fi
-          printf '%s\n' "$SA_KEY" > ./sa-key-deploy.json
-          node -e "JSON.parse(require('fs').readFileSync('./sa-key-deploy.json'))" || (echo "::error::Invalid JSON in Secret" && exit 1)
-          export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/sa-key-deploy.json"
+
+          # 2. Attempt fetching latest key from GCP Secret Manager (sadranim-game)
+          if command -v gcloud &> /dev/null && [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+            echo "Fetching secret FIREBASE_SERVICE_ACCOUNT_KEY from GCP Secret Manager..."
+            gcloud secrets versions access latest --secret="FIREBASE_SERVICE_ACCOUNT_KEY" --project="sadranim-game" > ./gcp-sm-key.json 2>/dev/null || true
+            if [ -s ./gcp-sm-key.json ]; then
+              mv ./gcp-sm-key.json ./sa-key-deploy.json
+              export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/sa-key-deploy.json"
+              echo "Successfully loaded FIREBASE_SERVICE_ACCOUNT_KEY from GCP Secret Manager!"
+            fi
+          fi
+
+          # 3. Validate JSON format
+          node -e "JSON.parse(require('fs').readFileSync('./sa-key-deploy.json'))" || (echo "::error::Invalid JSON secret key" && exit 1)
+
+          # 4. Deploy to Firebase Hosting
           npx firebase-tools deploy --only hosting --project sadranim-game --non-interactive
-          rm -f ./sa-key-deploy.json
+          rm -f ./sa-key-deploy.json ./gcp-sm-key.json
