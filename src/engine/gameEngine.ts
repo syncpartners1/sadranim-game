@@ -139,6 +139,26 @@ export function placeTileOnShelf(state: GameState, slotIndex: number): GameState
   return checkAndAdvance(next);
 }
 
+export function swapOwnShelfSlots(state: GameState, slotA: number, slotB: number): GameState {
+  if (slotA === slotB) return state;
+  const players = state.players.map(p => ({ ...p, shelf: [...p.shelf] }));
+  const player = players[state.currentTurnIndex];
+
+  const temp = player.shelf[slotA];
+  player.shelf[slotA] = player.shelf[slotB];
+  player.shelf[slotB] = temp;
+
+  // Update push slot index if push placeholder was moved
+  if (player.hasPushPlaceholder) {
+    if (player.pushSlotIndex === slotA) player.pushSlotIndex = slotB;
+    else if (player.pushSlotIndex === slotB) player.pushSlotIndex = slotA;
+  }
+
+  players[state.currentTurnIndex] = player;
+  const next = { ...state, players, lastAction: 'rearrange' };
+  return checkAndAdvance(next);
+}
+
 export function discardDrawnTile(state: GameState): GameState {
   if (!state.drawnTile) return state;
   const players = state.players.map(p => ({ ...p, discardPile: [...p.discardPile] }));

@@ -4,6 +4,7 @@ import type { GameState } from '../../types/game';
 import { Shelf } from '../Shelf/Shelf';
 import { DrawPool } from '../DrawPool/DrawPool';
 import { ActionPanel } from '../ActionPanel/ActionPanel';
+import { MissionCardComponent } from '../MissionCard/MissionCard';
 import { useGameStore } from '../../store/gameStore';
 import { canDrawFromNeighbourDiscard, getAdjacentPlayerIndices } from '../../engine/validators';
 
@@ -19,6 +20,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
     placeOnShelf,
     selectOwnSlot,
     selectTargetSlot,
+    activeTab,
+    setActiveTab,
   } = useGameStore();
 
   const currentPlayer = state.players[state.currentTurnIndex];
@@ -61,6 +64,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col p-2 gap-3 overflow-auto">
+      {/* ── TOP: Opponent shelves ───────────────────────────────── */}
       <div className="flex justify-center gap-4 flex-wrap">
         {opponents.map((opp) => {
           const playerIdx = state.players.indexOf(opp);
@@ -99,18 +103,38 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
         })}
       </div>
 
+      {/* ── MIDDLE: Draw pool or Mission Tab View ───────────────────── */}
       <div className="flex justify-center">
-        <div className="bg-black/30 rounded-2xl p-4 border border-white/10">
-          <DrawPool
-            state={state}
-            onDrawPool={doDrawPool}
-            onDrawDiscard={drawNeighbourDiscard}
-            canDrawDiscard={canDrawFromNeighbourDiscard(state)}
-            disabled={!canDraw}
-          />
-        </div>
+        {activeTab === 'mission' && human.mission ? (
+          <div className="bg-black/40 rounded-3xl p-6 border border-white/20 flex flex-col items-center gap-3 shadow-2xl max-w-sm w-full">
+            <div className="flex items-center justify-between w-full">
+              <span className="text-yellow-300 font-bold text-sm">🎯 Target Mission Pattern</span>
+              <button
+                onClick={() => setActiveTab('shelf')}
+                className="text-xs text-white/60 hover:text-white bg-white/10 px-2 py-1 rounded-lg"
+              >
+                ✕ Close
+              </button>
+            </div>
+            <MissionCardComponent mission={human.mission} revealed compact={false} />
+            <p className="text-xs text-white/60 text-center">
+              Match the 8 slots on your shelf to this exact layout!
+            </p>
+          </div>
+        ) : (
+          <div className="bg-black/30 rounded-2xl p-4 border border-white/10">
+            <DrawPool
+              state={state}
+              onDrawPool={doDrawPool}
+              onDrawDiscard={drawNeighbourDiscard}
+              canDrawDiscard={canDrawFromNeighbourDiscard(state)}
+              disabled={!canDraw}
+            />
+          </div>
+        )}
       </div>
 
+      {/* ── BOTTOM: Human player area ───────────────────────────── */}
       <div className="flex flex-col items-center gap-3 mt-auto">
         <div className="w-full max-w-lg">
           <ActionPanel state={state} />
@@ -128,6 +152,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
             player={human}
             isCurrentPlayer={state.currentTurnIndex === humanIdx}
             actionPhase={actionPhase}
+            allowRearrange={true}
             onSlotClick={(slot) => handleShelfSlotClick(humanIdx, slot)}
             highlightSlots={
               human.hasPushPlaceholder && human.pushSlotIndex !== null

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { GameState, ActionPhase } from '../../types/game';
 import { TileComponent } from '../Tile/Tile';
-import { MissionCardComponent } from '../MissionCard/MissionCard';
+import { MissionCardComponent, MissionCardModal } from '../MissionCard/MissionCard';
 import { useGameStore } from '../../store/gameStore';
 
 interface ActionPanelProps {
@@ -15,6 +15,10 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
     confirmSwitch,
     confirmSteal,
     confirmPush,
+    activeTab,
+    setActiveTab,
+    isMissionModalOpen,
+    toggleMissionModal,
   } = useGameStore();
 
   const [, setStealOwnSlot] = useState<number | null>(null);
@@ -36,6 +40,30 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
 
   return (
     <div className="flex flex-col items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/10">
+      {/* View switching tabs */}
+      <div className="flex items-center gap-2 bg-black/40 p-1 rounded-xl w-full max-w-xs justify-center">
+        <button
+          onClick={() => setActiveTab('shelf')}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
+            activeTab === 'shelf'
+              ? 'bg-yellow-400 text-slate-900 shadow'
+              : 'text-white/60 hover:text-white'
+          }`}
+        >
+          🛒 Shelf View
+        </button>
+        <button
+          onClick={() => setActiveTab('mission')}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
+            activeTab === 'mission'
+              ? 'bg-yellow-400 text-slate-900 shadow'
+              : 'text-white/60 hover:text-white'
+          }`}
+        >
+          🔍 Mission View
+        </button>
+      </div>
+
       <AnimatePresence mode="wait">
         <motion.div
           key={actionPhase}
@@ -151,15 +179,26 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
 
         {currentPlayer.mission && (
           <div className="flex flex-col items-center gap-1">
-            <span className="text-white/50 text-xs">Your Mission</span>
+            <span className="text-white/50 text-xs flex items-center gap-1">
+              Your Mission <span className="text-yellow-300">🔍</span>
+            </span>
             <MissionCardComponent
               mission={currentPlayer.mission}
               revealed={currentPlayer.type === 'HUMAN'}
               compact
+              onClick={() => toggleMissionModal(true)}
             />
           </div>
         )}
       </div>
+
+      {/* Mission Card Modal */}
+      {isMissionModalOpen && currentPlayer.mission && (
+        <MissionCardModal
+          mission={currentPlayer.mission}
+          onClose={() => toggleMissionModal(false)}
+        />
+      )}
     </div>
   );
 };
