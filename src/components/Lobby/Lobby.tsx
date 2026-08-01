@@ -18,8 +18,8 @@ export const Lobby: React.FC = () => {
         transition={{ type: 'spring', stiffness: 200, damping: 20 }}
       >
         <div className="flex flex-col items-center gap-2">
-          <img src="/assets/cards/jambo front.png" alt="הסדרנים" className="w-24 rounded-xl shadow-lg" />
-          <h1 className="text-4xl font-black text-yellow-400 tracking-tight">
+          <img src="/assets/Logo.png" alt="הסדרנים" className="w-56 rounded-2xl shadow-xl border border-white/10" />
+          <h1 className="text-4xl font-black text-yellow-400 tracking-tight mt-1">
             הסדרנים
           </h1>
           <p className="text-white/50 text-sm text-center">משחק סידור מדפים בסופרמרקט</p>
