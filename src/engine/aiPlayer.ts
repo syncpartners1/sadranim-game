@@ -23,9 +23,16 @@ export function aiTakeTurn(state: GameState): GameState {
   if (!tile) return state;
 
   if (tile.type === 'SALE') {
+    // Check if AI already has a SALE tile on shelf — max 1 allowed!
+    const existingSale = player.shelf.some(t => t?.type === 'SALE');
+    if (existingSale) {
+      // Must discard second SALE tile
+      return discardDrawnTile(state);
+    }
     const slot = findWorstSlot(player);
     return slot >= 0 ? placeTileOnShelf(state, slot) : discardDrawnTile(state);
   }
+
   if (tile.type === 'PRODUCT' && player.mission) {
     for (let i = 0; i < 8; i++) {
       if (tile.productId === player.mission.pattern[i] && player.shelf[i]?.productId !== player.mission.pattern[i]) {
@@ -37,6 +44,7 @@ export function aiTakeTurn(state: GameState): GameState {
       if (slot >= 0) return placeTileOnShelf(state, slot);
     }
   }
+
   return discardDrawnTile(state);
 }
 
@@ -66,7 +74,7 @@ function aiSteal(state: GameState, player: Player): GameState {
   if (!player.mission || myWorst < 0) return discardDrawnTile(state);
   for (const opp of opps) {
     for (const needed of player.mission.pattern) {
-      const ts = opp.shelf.findIndex(t => t?.productId === needed);
+      const ts = opp.shelf.findIndex(t => t?.productId === needed && t?.type === 'PRODUCT');
       if (ts >= 0) return executeStealAction(state, opp.id, ts, myWorst);
     }
   }

@@ -5,9 +5,9 @@ import type { Player, GameState, Tile } from '../types/game';
  * Rules:
  *   1. All 8 slots must be filled (no nulls).
  *   2. No PUSH placeholder active.
- *   3. At most 1 SALE tile allowed on the shelf.
- *   4. Every non-SALE slot must match the exact product required by the mission pattern.
- *   5. SALE tile acts as a wildcard for at most 1 slot.
+ *   3. At most 1 SALE (מבצע) tile allowed on the shelf!
+ *   4. A SALE tile acts as a wildcard for ANY required product at its position.
+ *   5. All other 7 slots must match the exact product required by the mission pattern.
  */
 export function checkWin(player: Player, _state?: GameState): boolean {
   const { shelf, mission, hasPushPlaceholder } = player;
@@ -16,13 +16,14 @@ export function checkWin(player: Player, _state?: GameState): boolean {
 
   const shelfTiles = shelf as Tile[];
 
-  // Special tiles like SWITCH, STEAL, PUSH cannot remain on shelf
+  // Action tiles (SWITCH, STEAL, PUSH) cannot remain on shelf
   if (shelfTiles.some(t => t.type === 'SWITCH' || t.type === 'STEAL' || t.type === 'PUSH')) {
     return false;
   }
 
+  // RULE: Maximum 1 SALE tile per shelf
   const saleTiles = shelfTiles.filter(t => t.type === 'SALE');
-  if (saleTiles.length > 1) return false; // max 1 SALE tile
+  if (saleTiles.length > 1) return false;
 
   let productMismatches = 0;
   for (let i = 0; i < 8; i++) {
@@ -30,19 +31,19 @@ export function checkWin(player: Player, _state?: GameState): boolean {
     const targetProduct = mission.pattern[i];
 
     if (tile.type === 'SALE') {
-      // Wildcard slot — allowed if we have 1 SALE tile
+      // SALE tile replaces whichever product is required at position i (Wildcard)
       continue;
     } else if (tile.type === 'PRODUCT' && tile.productId === targetProduct) {
-      // Matching product
+      // Correct matching product
       continue;
     } else {
-      // Product mismatch or illegal tile
+      // Product mismatch or invalid tile
       productMismatches++;
     }
   }
 
-  // A single SALE tile covers at most 1 mismatch
-  return productMismatches <= (saleTiles.length === 1 ? 1 : 0);
+  // All non-SALE slots must match their target product exactly (productMismatches === 0)
+  return productMismatches === 0;
 }
 
 /**
@@ -52,7 +53,7 @@ export function getSlotMatches(player: Player): boolean[] {
   if (!player.mission) return Array(8).fill(false);
   return player.shelf.map((tile, i) => {
     if (!tile) return false;
-    if (tile.type === 'SALE') return true;
+    if (tile.type === 'SALE') return true; // Wildcard
     return tile.type === 'PRODUCT' && tile.productId === player.mission!.pattern[i];
   });
 }

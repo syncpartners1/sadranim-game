@@ -119,6 +119,15 @@ export function placeTileOnShelf(state: GameState, slotIndex: number): GameState
   const players = state.players.map(p => ({ ...p, shelf: [...p.shelf], discardPile: [...p.discardPile] }));
   const player = players[state.currentTurnIndex];
 
+  // RULE: Maximum 1 SALE tile per player shelf!
+  if (state.drawnTile.type === 'SALE') {
+    const existingSaleIndex = player.shelf.findIndex(t => t?.type === 'SALE');
+    if (existingSaleIndex >= 0 && existingSaleIndex !== slotIndex) {
+      // Player already has a SALE tile on another slot — cannot place a second SALE tile!
+      return state;
+    }
+  }
+
   if (state.actionPhase === 'PUSH_RESOLVE' && player.hasPushPlaceholder) {
     if (slotIndex !== player.pushSlotIndex) return state;
     const displaced = player.shelf[slotIndex];
@@ -195,6 +204,12 @@ export function executeStealAction(state: GameState, targetId: string, targetSlo
   const tgt = players[tIdx];
   const stolen = tgt.shelf[targetSlot];
   if (!stolen) return state;
+
+  // RULE: If stolen tile is SALE, check if current player already has a SALE tile
+  if (stolen.type === 'SALE' && cur.shelf.some((t, idx) => idx !== ownSlot && t?.type === 'SALE')) {
+    return state; // cannot steal a second SALE tile
+  }
+
   const displaced = cur.shelf[ownSlot];
   cur.shelf[ownSlot] = stolen;
   tgt.shelf[targetSlot] = null;
