@@ -65,13 +65,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
   const activeMobileOpponent = opponents[selectedMobileOpponentIdx] ?? opponents[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col p-2 gap-3 overflow-auto" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col p-3 gap-4 overflow-auto" dir="rtl">
 
-      {/* ── TOP: OPPONENT SHELVES ───────────────────────────────── */}
+      {/* ── 1. TOP SECTION: OPPONENT SHELVES ────────────────────── */}
 
-      {/* MOBILE (< 768px): Tabbed navigation for opponents */}
+      {/* Mobile: Tabs for selecting opponent */}
       <div className="flex flex-col items-center gap-2 md:hidden">
-        <div className="flex items-center gap-1.5 bg-black/40 p-1 rounded-xl max-w-full overflow-x-auto">
+        <div className="flex items-center gap-2 bg-black/50 p-1.5 rounded-xl max-w-full overflow-x-auto border border-white/10">
+          <span className="text-white/40 text-xs font-bold px-1">יריבים:</span>
           {opponents.map((opp, idx) => {
             const playerIdx = state.players.indexOf(opp);
             const isCurrent = state.currentTurnIndex === playerIdx;
@@ -84,7 +85,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
                 className={`
                   px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1
                   ${isSelected
-                    ? 'bg-yellow-400 text-slate-900 shadow-md'
+                    ? 'bg-yellow-400 text-slate-950 shadow'
                     : 'bg-white/10 text-white/70 hover:bg-white/20'
                   }
                   ${isCurrent ? 'ring-2 ring-yellow-300 animate-pulse' : ''}
@@ -98,19 +99,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
           })}
         </div>
 
-        {/* Selected opponent shelf on mobile */}
         {activeMobileOpponent && (
           <div className="flex flex-col items-center">
             {(() => {
               const playerIdx = state.players.indexOf(activeMobileOpponent);
               const isCurrent = state.currentTurnIndex === playerIdx;
               return (
-                <motion.div
-                  key={activeMobileOpponent.id}
-                  className="flex flex-col items-center"
-                  animate={isCurrent ? { y: [0, -3, 0] } : {}}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                >
+                <div key={activeMobileOpponent.id} className="flex flex-col items-center">
                   <Shelf
                     player={activeMobileOpponent}
                     isCurrentPlayer={isCurrent}
@@ -125,33 +120,24 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
                     }
                   />
                   {isCurrent && isAIThinking && (
-                    <motion.div
-                      className="text-yellow-300 text-xs mt-0.5 font-medium"
-                      animate={{ opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: 0.8, repeat: Infinity }}
-                    >
+                    <span className="text-yellow-300 text-xs mt-1 font-medium animate-pulse">
                       🤖 ה-AI חושב…
-                    </motion.div>
+                    </span>
                   )}
-                </motion.div>
+                </div>
               );
             })()}
           </div>
         )}
       </div>
 
-      {/* DESKTOP (≥ 768px): Virtual seating table layout (all opponents visible) */}
+      {/* Desktop (>= 768px): All opponents visible side-by-side */}
       <div className="hidden md:flex justify-center gap-6 flex-wrap">
         {opponents.map((opp) => {
           const playerIdx = state.players.indexOf(opp);
           const isCurrent = state.currentTurnIndex === playerIdx;
           return (
-            <motion.div
-              key={opp.id}
-              className="flex flex-col items-center"
-              animate={isCurrent ? { y: [0, -4, 0] } : {}}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            >
+            <div key={opp.id} className="flex flex-col items-center">
               <Shelf
                 player={opp}
                 isCurrentPlayer={isCurrent}
@@ -166,22 +152,18 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
                 }
               />
               {isCurrent && isAIThinking && (
-                <motion.div
-                  className="text-yellow-300 text-xs mt-1 font-medium"
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 0.8, repeat: Infinity }}
-                >
+                <span className="text-yellow-300 text-xs mt-1 font-medium animate-pulse">
                   🤖 ה-AI חושב…
-                </motion.div>
+                </span>
               )}
-            </motion.div>
+            </div>
           );
         })}
       </div>
 
-      {/* ── CENTER: Draw Pool & Discard & Mission Stack Row ────────────── */}
+      {/* ── 2. CENTER SECTION: DRAW POOL & PREVIOUS DISCARD & MISSIONS DECK ── */}
       <div className="flex justify-center my-1">
-        <div className="bg-black/30 rounded-2xl p-3 border border-white/10">
+        <div className="bg-black/40 rounded-3xl p-4 border border-white/10 shadow-xl">
           <DrawPool
             state={state}
             onDrawPool={doDrawPool}
@@ -192,49 +174,48 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
         </div>
       </div>
 
-      {/* ── BOTTOM: Player Area — Side-by-Side Shelf + Secret Mission Card ── */}
+      {/* ── 3. BOTTOM SECTION: YOUR PLAYER AREA (SHELF + MISSION CARD SIDE-BY-SIDE) ── */}
       <div className="flex flex-col items-center gap-3 mt-auto">
         <div className="w-full max-w-xl">
           <ActionPanel state={state} />
         </div>
 
-        <div className="flex items-center justify-center gap-4 flex-wrap max-w-2xl w-full">
-          {/* Player Shelf Board */}
-          <motion.div
-            animate={state.currentTurnIndex === humanIdx
-              ? { boxShadow: ['0 0 0px #fde047', '0 0 20px #fde047', '0 0 0px #fde047'] }
-              : { boxShadow: 'none' }
-            }
-            transition={{ duration: 2, repeat: Infinity }}
-            className="rounded-2xl p-1 bg-white/5 border border-white/10"
-          >
-            <Shelf
-              player={human}
-              isCurrentPlayer={state.currentTurnIndex === humanIdx}
-              actionPhase={actionPhase}
-              allowRearrange={true}
-              onSlotClick={(slot) => handleShelfSlotClick(humanIdx, slot)}
-              highlightSlots={
-                human.hasPushPlaceholder && human.pushSlotIndex !== null
-                  ? [human.pushSlotIndex]
-                  : []
-              }
-            />
-          </motion.div>
-
-          {/* Secret Mission Card — Side by Side */}
-          {human.mission && (
-            <div className="flex flex-col items-center gap-2 p-3 bg-white/5 border border-white/10 rounded-2xl">
-              <span className="text-yellow-300 font-bold text-xs">🎯 כרטיס המשימה שלך</span>
-              <MissionCardComponent
-                mission={human.mission}
-                revealed={true}
-                compact={false}
+        <div className="flex items-start justify-center gap-6 flex-wrap max-w-3xl w-full">
+          {/* Your Shelf Board */}
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-yellow-300 font-bold text-xs">🛒 המדף שלך</span>
+            <div className="rounded-2xl p-1 bg-white/5 border border-white/10 shadow-xl">
+              <Shelf
+                player={human}
+                isCurrentPlayer={state.currentTurnIndex === humanIdx}
+                actionPhase={actionPhase}
+                allowRearrange={true}
+                onSlotClick={(slot) => handleShelfSlotClick(humanIdx, slot)}
+                highlightSlots={
+                  human.hasPushPlaceholder && human.pushSlotIndex !== null
+                    ? [human.pushSlotIndex]
+                    : []
+                }
               />
+            </div>
+          </div>
+
+          {/* Your Target Mission Card (Fixed, Side-by-Side) */}
+          {human.mission && (
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-yellow-300 font-bold text-xs">🎯 כרטיס המשימה הסודי</span>
+              <div className="p-2 bg-white/5 border border-white/10 rounded-2xl shadow-xl">
+                <MissionCardComponent
+                  mission={human.mission}
+                  revealed={true}
+                  compact={false}
+                />
+              </div>
             </div>
           )}
         </div>
 
+        {/* Footer info */}
         <div className="flex items-center gap-3 text-white/50 text-xs">
           <span>סבב {state.roundNumber}</span>
           <span>•</span>

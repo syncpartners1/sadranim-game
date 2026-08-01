@@ -11,16 +11,11 @@
     ],
     "headers": [
       {
-        "source": "**/*.@(js|css)",
-        "headers": [{ "key": "Cache-Control", "value": "max-age=31536000, immutable" }]
-      },
-      {
-        "source": "**/*.@(png|jpg|svg|ico|woff|woff2)",
-        "headers": [{ "key": "Cache-Control", "value": "max-age=86400" }]
-      },
-      {
         "source": "**",
         "headers": [
+          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+          { "key": "Pragma", "value": "no-cache" },
+          { "key": "Expires", "value": "0" },
           { "key": "X-Frame-Options", "value": "ALLOWALL" },
           { "key": "X-Content-Type-Options", "value": "nosniff" }
         ]
