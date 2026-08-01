@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import type { GameState, GameSettings, ActionPhase } from '../types/game';
-import { setupGame, drawFromPool, drawFromNeighbourDiscard, placeTileOnShelf, discardDrawnTile, executeSwitchAction, executeStealAction, executePushAction, startNextRound, swapOwnShelfSlots, claimWin as claimWinEngine } from '../engine/gameEngine';
+import { setupGame, drawFromPool, drawFromNeighbourDiscard, placeTileOnShelf, discardDrawnTile, executeSwitchAction, executeStealAction, executePushAction, startNextRound, swapOwnShelfSlots, claimWin as claimWinEngine, convertHumanToAI } from '../engine/gameEngine';
 import { aiTakeTurn } from '../engine/aiPlayer';
+import { saveRoomStateToFirestore, subscribeToRoomFirestore, fetchRoomStateFromFirestore } from '../services/roomSync';
 
 interface GameStore {
   state: GameState | null;
@@ -9,6 +10,8 @@ interface GameStore {
   isAIThinking: boolean;
   updateSettings: (s: Partial<GameSettings>) => void;
   startGame: () => void;
+  joinRoom: (roomCode: string) => Promise<boolean>;
+  togglePlayerReady: (playerId: string) => void;
   drawPool: () => void;
   drawNeighbourDiscard: () => void;
   placeOnShelf: (slot: number) => void;
@@ -22,11 +25,15 @@ interface GameStore {
   confirmPush: () => void;
   continueAfterRound: () => void;
   resetGame: () => void;
+  checkAFKTimeout: () => void;
   setTelegramUser: (user: GameState['telegramUser']) => void;
 }
 
 const DEFAULT: GameSettings = { playerCount: 2, humanCount: 1, aiLevel: 'MEDIUM', useTelegramNames: false };
 const AI_DELAY = 900;
+const AFK_TIMEOUT_MS = 300 * 1000; // 5 minutes AFK timeout
+
+let unsubscribeRoom: (() => void) | null = null;
 
 export const useGameStore = create<GameStore>((set, get) => ({
   state: null,
@@ -38,7 +45,32 @@ export const useGameStore = create<GameStore>((set, get) => ({
   startGame: () => {
     const s = setupGame(get().settings);
     set({ state: s });
+    saveRoomStateToFirestore(s);
+    setupFirestoreSubscription(s.roomCode, set);
     scheduleAI(s, set, get);
+  },
+
+  joinRoom: async (roomCode: string) => {
+    const remoteState = await fetchRoomStateFromFirestore(roomCode);
+    if (remoteState) {
+      set({ state: remoteState, settings: { ...get().settings, roomCode } });
+      setupFirestoreSubscription(roomCode, set);
+      scheduleAI(remoteState, set, get);
+      return true;
+    }
+    return false;
+  },
+
+  togglePlayerReady: (playerId: string) => {
+    const { state } = get();
+    if (!state) return;
+    const players = state.players.map(p => p.id === playerId ? { ...p, isReady: !p.isReady } : p);
+    const allReady = players.every(p => p.isReady);
+    const nextStatus = allReady ? 'PLAYING' : 'WAITING_FOR_READIES';
+    const s = { ...state, players, gameStatus: nextStatus as GameState['gameStatus'] };
+    set({ state: s });
+    saveRoomStateToFirestore(s);
+    if (nextStatus === 'PLAYING') scheduleAI(s, set, get);
   },
 
   drawPool: () => {
@@ -46,6 +78,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!state || state.gameStatus !== 'PLAYING') return;
     const s = drawFromPool(state);
     set({ state: s });
+    saveRoomStateToFirestore(s);
   },
 
   drawNeighbourDiscard: () => {
@@ -53,6 +86,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!state || state.gameStatus !== 'PLAYING') return;
     const s = drawFromNeighbourDiscard(state);
     set({ state: s });
+    saveRoomStateToFirestore(s);
   },
 
   placeOnShelf: (slot) => {
@@ -60,6 +94,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!state) return;
     const s = placeTileOnShelf(state, slot);
     set({ state: s });
+    saveRoomStateToFirestore(s);
     scheduleAI(s, set, get);
   },
 
@@ -68,6 +103,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!state) return;
     const s = swapOwnShelfSlots(state, slotA, slotB);
     set({ state: s });
+    saveRoomStateToFirestore(s);
   },
 
   claimWin: (playerId: string) => {
@@ -75,6 +111,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!state) return;
     const s = claimWinEngine(state, playerId);
     set({ state: s });
+    saveRoomStateToFirestore(s);
   },
 
   discardTile: () => {
@@ -82,6 +119,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!state) return;
     const s = discardDrawnTile(state);
     set({ state: s });
+    saveRoomStateToFirestore(s);
     scheduleAI(s, set, get);
   },
 
@@ -100,6 +138,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (o === null || !p || t === null) return;
     const s = executeSwitchAction(state, o, p, t);
     set({ state: s });
+    saveRoomStateToFirestore(s);
     scheduleAI(s, set, get);
   },
 
@@ -110,6 +149,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!p || t === null) return;
     const s = executeStealAction(state, p, t, ownSlot);
     set({ state: s });
+    saveRoomStateToFirestore(s);
     scheduleAI(s, set, get);
   },
 
@@ -120,6 +160,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!p || t === null) return;
     const s = executePushAction(state, p, t);
     set({ state: s });
+    saveRoomStateToFirestore(s);
     scheduleAI(s, set, get);
   },
 
@@ -128,13 +169,40 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!state) return;
     const s = startNextRound(state);
     set({ state: s });
+    saveRoomStateToFirestore(s);
     scheduleAI(s, set, get);
   },
 
-  resetGame: () => set({ state: null }),
+  resetGame: () => {
+    if (unsubscribeRoom) unsubscribeRoom();
+    set({ state: null });
+  },
+
+  checkAFKTimeout: () => {
+    const { state } = get();
+    if (!state || state.gameStatus !== 'PLAYING') return;
+    const current = state.players[state.currentTurnIndex];
+    if (current?.type === 'HUMAN') {
+      const elapsed = Date.now() - (state.turnStartTimestamp || Date.now());
+      if (elapsed >= AFK_TIMEOUT_MS) {
+        // Player has been AFK for > 5 minutes! Convert to AI Bot and continue
+        const s = convertHumanToAI(state, current.id);
+        set({ state: s });
+        saveRoomStateToFirestore(s);
+        scheduleAI(s, set, get);
+      }
+    }
+  },
 
   setTelegramUser: (user) => set(st => ({ state: st.state ? { ...st.state, telegramUser: user } : null })),
 }));
+
+function setupFirestoreSubscription(roomCode: string, set: any) {
+  if (unsubscribeRoom) unsubscribeRoom();
+  unsubscribeRoom = subscribeToRoomFirestore(roomCode, (newState) => {
+    set(() => ({ state: newState }));
+  });
+}
 
 function isAI(state: GameState) {
   return state.players[state.currentTurnIndex]?.type === 'AI';
@@ -148,11 +216,13 @@ function scheduleAI(state: GameState, set: any, get: any) {
     if (!cur || cur.gameStatus !== 'PLAYING') { set(() => ({ isAIThinking: false })); return; }
     const afterDraw = drawFromPool(cur);
     set(() => ({ state: afterDraw }));
+    saveRoomStateToFirestore(afterDraw);
     setTimeout(() => {
       const cur2 = get().state;
       if (!cur2) return;
       const afterAct = aiTakeTurn(cur2);
       set(() => ({ state: afterAct, isAIThinking: false }));
+      saveRoomStateToFirestore(afterAct);
       scheduleAI(afterAct, set, get);
     }, AI_DELAY / 2);
   }, AI_DELAY);

@@ -1,6 +1,7 @@
 import type { GameState, Player, Tile, GameSettings, ActionPhase } from '../types/game';
 import { createTilePool, MISSION_CARDS, PUSH_PLACEHOLDER } from '../data/tiles';
 import { checkWin } from './validators';
+import { generateRoomCode } from '../services/roomSync';
 
 export function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -16,15 +17,19 @@ export function generateId(): string {
 }
 
 export function setupGame(settings: GameSettings): GameState {
-  const { playerCount, humanCount, aiLevel } = settings;
+  const { playerCount, humanCount, aiLevel, roomCode: existingRoomCode } = settings;
   let drawPool = shuffle(createTilePool());
   const missionsPool = shuffle([...MISSION_CARDS]);
+  const roomCode = existingRoomCode || generateRoomCode();
 
   const players: Player[] = Array.from({ length: playerCount }, (_, i) => ({
     id: `player-${i}`,
     name: i < humanCount ? (i === 0 ? 'You' : `Player ${i + 1}`) : `Bot ${i - humanCount + 1}`,
     type: (i < humanCount ? 'HUMAN' : 'AI') as Player['type'],
     aiLevel: i < humanCount ? undefined : aiLevel,
+    isHost: i === 0,
+    isReady: true,
+    lastActiveTimestamp: Date.now(),
     shelf: Array(8).fill(null) as (Tile | null)[],
     mission: null,
     discardPile: [],
@@ -52,23 +57,48 @@ export function setupGame(settings: GameSettings): GameState {
 
   return {
     gameId: generateId(),
+    roomCode,
     players,
     currentTurnIndex: 0,
     drawPool,
     allDiscarded: [],
     missionsPool,
     usedMissions: [],
-    gameStatus: 'PLAYING',
+    gameStatus: humanCount > 1 ? 'WAITING_FOR_READIES' : 'PLAYING',
     roundNumber: 1,
     winnerId: null,
     overallWinnerId: null,
     drawnTile: null,
     drawnFromDiscard: false,
     actionPhase: 'IDLE',
+    turnStartTimestamp: Date.now(),
     selectedOwnSlot: null,
     selectedTargetPlayerId: null,
     selectedTargetSlot: null,
     lastAction: null,
+  };
+}
+
+/**
+ * Converts a human player to an AI Bot (used when player is AFK > 5 minutes or disconnects).
+ */
+export function convertHumanToAI(state: GameState, playerId: string): GameState {
+  const players = state.players.map(p => {
+    if (p.id === playerId && p.type === 'HUMAN') {
+      return {
+        ...p,
+        name: `${p.name} (Bot)`,
+        type: 'AI' as const,
+        aiLevel: 'MEDIUM' as const,
+      };
+    }
+    return p;
+  });
+
+  return {
+    ...state,
+    players,
+    lastAction: 'afk_convert_ai',
   };
 }
 
@@ -111,9 +141,8 @@ export function drawFromNeighbourDiscard(state: GameState): GameState {
   const rightIdx = (state.currentTurnIndex + 1) % players.length;
   if (players[rightIdx].discardPile.length === 0) return state;
 
-  // Take top tile from right neighbour's discard pile
   const rawTile = players[rightIdx].discardPile.shift()!;
-  const tile = { ...rawTile }; // Fresh clone object to prevent reference mutations!
+  const tile = { ...rawTile };
   const currentPlayer = players[state.currentTurnIndex];
 
   let actionPhase: ActionPhase = 'TILE_DRAWN';
@@ -122,7 +151,6 @@ export function drawFromNeighbourDiscard(state: GameState): GameState {
   else if (tile.type === 'STEAL') actionPhase = 'STEAL_SELECT_TARGET';
   else if (tile.type === 'PUSH') actionPhase = 'PUSH_SELECT_TARGET';
 
-  // Set drawnFromDiscard: true — player MUST place it onto their shelf board!
   return checkAnyPlayerWin({
     ...state,
     players,
@@ -138,11 +166,9 @@ export function placeTileOnShelf(state: GameState, slotIndex: number): GameState
   const players = state.players.map(p => ({ ...p, shelf: [...p.shelf], discardPile: [...p.discardPile] }));
   const player = players[state.currentTurnIndex];
 
-  // RULE: Maximum 1 SALE tile per player shelf!
   if (state.drawnTile.type === 'SALE') {
     const existingSaleIndex = player.shelf.findIndex(t => t?.type === 'SALE');
     if (existingSaleIndex >= 0 && existingSaleIndex !== slotIndex) {
-      // Player already has a SALE tile on another slot — cannot place a second SALE tile!
       return state;
     }
   }
@@ -203,7 +229,6 @@ export function claimWin(state: GameState, playerId: string): GameState {
 }
 
 export function discardDrawnTile(state: GameState): GameState {
-  // If tile was drawn from neighbour's discard, player MUST place it onto their shelf board!
   if (!state.drawnTile || state.drawnFromDiscard) return state;
 
   const players = state.players.map(p => ({ ...p, discardPile: [...p.discardPile] }));
@@ -243,7 +268,7 @@ export function executeStealAction(state: GameState, targetId: string, targetSlo
   if (!stolen) return state;
 
   if (stolen.type === 'SALE' && cur.shelf.some((t, idx) => idx !== ownSlot && t?.type === 'SALE')) {
-    return state; // cannot steal a second SALE tile
+    return state;
   }
 
   const displaced = cur.shelf[ownSlot];
@@ -314,6 +339,7 @@ export function advanceTurn(state: GameState): GameState {
     actionPhase: 'IDLE',
     drawnTile: null,
     drawnFromDiscard: false,
+    turnStartTimestamp: Date.now(),
     lastAction: null
   };
 }
@@ -377,10 +403,11 @@ function endRound(state: GameState, winnerId: string): GameState {
     drawnTile: null,
     drawnFromDiscard: false,
     actionPhase: 'IDLE',
+    turnStartTimestamp: Date.now(),
     lastAction: 'round_over'
   };
 }
 
 export function startNextRound(state: GameState): GameState {
-  return { ...state, gameStatus: 'PLAYING', winnerId: null, lastAction: null };
+  return { ...state, gameStatus: 'PLAYING', winnerId: null, turnStartTimestamp: Date.now(), lastAction: null };
 }

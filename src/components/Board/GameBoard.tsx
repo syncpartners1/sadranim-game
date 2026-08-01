@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { GameState } from '../../types/game';
 import { Shelf } from '../Shelf/Shelf';
@@ -20,13 +20,31 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
     placeOnShelf,
     selectOwnSlot,
     selectTargetSlot,
+    checkAFKTimeout,
   } = useGameStore();
 
   const [selectedMobileOpponentIdx, setSelectedMobileOpponentIdx] = useState<number>(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
 
   const currentPlayer = state.players[state.currentTurnIndex];
   const isHumanTurn = currentPlayer.type === 'HUMAN';
-  const { actionPhase, selectedTargetPlayerId } = state;
+  const { actionPhase, selectedTargetPlayerId, turnStartTimestamp } = state;
+
+  // AFK Timer Hook — checks every second, triggers AI takeover after 5 minutes (300s)
+  useEffect(() => {
+    if (state.gameStatus !== 'PLAYING') return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const elapsed = Math.floor((now - (turnStartTimestamp || now)) / 1000);
+      setElapsedSeconds(elapsed);
+
+      // Check AFK timeout
+      checkAFKTimeout();
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [state.gameStatus, state.currentTurnIndex, turnStartTimestamp]);
 
   const canDraw = isHumanTurn && actionPhase === 'IDLE';
   const canPlace = isHumanTurn && (actionPhase === 'TILE_DRAWN' || actionPhase === 'PUSH_RESOLVE');
@@ -63,6 +81,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
   const opponents = state.players.filter((_, i) => i !== humanIdx);
 
   const activeMobileOpponent = opponents[selectedMobileOpponentIdx] ?? opponents[0];
+
+  // 5-minute AFK remaining timer
+  const remainingAFKSeconds = Math.max(0, 300 - elapsedSeconds);
+  const afkMinutes = Math.floor(remainingAFKSeconds / 60);
+  const afkSecs = remainingAFKSeconds % 60;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col p-3 gap-4 overflow-auto" dir="rtl">
@@ -163,7 +186,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
 
       {/* ── 2. CENTER SECTION: DRAW POOL & PREVIOUS DISCARD & MISSIONS DECK ── */}
       <div className="flex justify-center my-1">
-        <div className="bg-black/40 rounded-3xl p-4 border border-white/10 shadow-xl">
+        <div className="bg-black/40 rounded-3xl p-4 border border-white/10 shadow-xl flex flex-col items-center gap-2">
           <DrawPool
             state={state}
             onDrawPool={doDrawPool}
@@ -171,6 +194,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
             canDrawDiscard={canDrawFromNeighbourDiscard(state)}
             disabled={!canDraw}
           />
+          {/* AFK Timer display for current turn */}
+          {isHumanTurn && (
+            <span className="text-[10px] text-white/40 font-mono">
+              ⏱ זמן תור נותר: {afkMinutes}:{afkSecs < 10 ? `0${afkSecs}` : afkSecs} (מעבר ל-AI ב-5 דקות)
+            </span>
+          )}
         </div>
       </div>
 
@@ -200,7 +229,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
             </div>
           </div>
 
-          {/* Your Target Mission Card (Fixed, Side-by-Side) */}
+          {/* Your Target Mission Card */}
           {human.mission && (
             <div className="flex flex-col items-center gap-1">
               <span className="text-yellow-300 font-bold text-xs">🎯 כרטיס המשימה הסודי</span>
@@ -217,6 +246,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
 
         {/* Footer info */}
         <div className="flex items-center gap-3 text-white/50 text-xs">
+          <span>קוד חדר: {state.roomCode}</span>
+          <span>•</span>
           <span>סבב {state.roundNumber}</span>
           <span>•</span>
           <span>{state.drawPool.length} אריחים בקופה</span>

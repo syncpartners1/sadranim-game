@@ -39,6 +39,9 @@ export interface Player {
   type: PlayerType;
   aiLevel?: AILevel;
   avatarUrl?: string;    // Telegram user avatar or placeholder
+  isHost?: boolean;
+  isReady?: boolean;
+  lastActiveTimestamp?: number; // for 5-min AFK detection
   shelf: (Tile | null)[]; // exactly 8 slots; null = empty; PUSH tile occupies a slot temporarily
   mission: MissionCard | null;
   discardPile: Tile[];   // stack — top = last discarded (index 0)
@@ -59,24 +62,27 @@ export type ActionPhase =
 
 export interface GameState {
   gameId: string;
+  roomCode: string;             // 5-character invite code (e.g. "SADR8")
   players: Player[];
   currentTurnIndex: number;
   drawPool: Tile[];
-  allDiscarded: Tile[];  // merged when pool runs out
-  missionsPool: MissionCard[];   // remaining undealt missions
-  usedMissions: MissionCard[];   // missions already completed
-  gameStatus: 'LOBBY' | 'PLAYING' | 'ROUND_OVER' | 'GAME_OVER';
+  allDiscarded: Tile[];         // merged when pool runs out
+  missionsPool: MissionCard[];  // remaining undealt missions
+  usedMissions: MissionCard[];  // missions already completed
+  gameStatus: 'LOBBY' | 'WAITING_FOR_READIES' | 'PLAYING' | 'ROUND_OVER' | 'GAME_OVER';
   roundNumber: number;
   winnerId: string | null;       // round winner
   overallWinnerId: string | null; // game winner
   drawnTile: Tile | null;        // tile currently in hand (not yet placed/discarded)
-  drawnFromDiscard?: boolean;    // true when tile was drawn from neighbour's discard (MUST place on shelf)
+  drawnFromDiscard?: boolean;    // true when tile was drawn from neighbour's discard
   actionPhase: ActionPhase;
+  // Turn timestamp for 5-min AFK timeout
+  turnStartTimestamp: number;
   // For switch/steal/push — which slots are selected
   selectedOwnSlot: number | null;
   selectedTargetPlayerId: string | null;
   selectedTargetSlot: number | null;
-  // Animation events (consumed by UI)
+  // Animation events
   lastAction: string | null;
   // Telegram user info
   telegramUser?: { id: number; first_name: string; username?: string; photo_url?: string };
@@ -84,7 +90,8 @@ export interface GameState {
 
 export interface GameSettings {
   playerCount: number;      // 2-4
-  humanCount: number;       // 1 = single player, 2-4 = pass & play
+  humanCount: number;       // 1 = single player vs AI, 2-4 = online multiplayer / pass & play
   aiLevel: AILevel;
   useTelegramNames: boolean;
+  roomCode?: string;
 }
