@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { GameState, GameSettings, ActionPhase } from '../types/game';
-import { setupGame, drawFromPool, drawFromNeighbourDiscard, placeTileOnShelf, discardDrawnTile, executeSwitchAction, executeStealAction, executePushAction, startNextRound, swapOwnShelfSlots } from '../engine/gameEngine';
+import { setupGame, drawFromPool, drawFromNeighbourDiscard, placeTileOnShelf, discardDrawnTile, executeSwitchAction, executeStealAction, executePushAction, startNextRound, swapOwnShelfSlots, claimWin as claimWinEngine } from '../engine/gameEngine';
 import { aiTakeTurn } from '../engine/aiPlayer';
 
 interface GameStore {
@@ -13,6 +13,7 @@ interface GameStore {
   drawNeighbourDiscard: () => void;
   placeOnShelf: (slot: number) => void;
   swapOwnSlots: (slotA: number, slotB: number) => void;
+  claimWin: (playerId: string) => void;
   discardTile: () => void;
   selectOwnSlot: (slot: number) => void;
   selectTargetSlot: (playerId: string, slot: number) => void;
@@ -66,6 +67,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { state } = get();
     if (!state) return;
     const s = swapOwnShelfSlots(state, slotA, slotB);
+    set({ state: s });
+  },
+
+  claimWin: (playerId: string) => {
+    const { state } = get();
+    if (!state) return;
+    const s = claimWinEngine(state, playerId);
     set({ state: s });
   },
 

@@ -94,7 +94,7 @@ export function drawFromPool(state: GameState): GameState {
     actionPhase = 'PUSH_SELECT_TARGET';
   }
 
-  return { ...state, drawPool: pool, allDiscarded, drawnTile: tile, actionPhase, lastAction: 'draw_pool' };
+  return checkAnyPlayerWin({ ...state, drawPool: pool, allDiscarded, drawnTile: tile, actionPhase, lastAction: 'draw_pool' });
 }
 
 export function drawFromNeighbourDiscard(state: GameState): GameState {
@@ -111,7 +111,7 @@ export function drawFromNeighbourDiscard(state: GameState): GameState {
   else if (tile.type === 'STEAL') actionPhase = 'STEAL_SELECT_TARGET';
   else if (tile.type === 'PUSH') actionPhase = 'PUSH_SELECT_TARGET';
 
-  return { ...state, players, drawnTile: tile, actionPhase, lastAction: 'draw_discard' };
+  return checkAnyPlayerWin({ ...state, players, drawnTile: tile, actionPhase, lastAction: 'draw_discard' });
 }
 
 export function placeTileOnShelf(state: GameState, slotIndex: number): GameState {
@@ -139,10 +139,6 @@ export function placeTileOnShelf(state: GameState, slotIndex: number): GameState
   return checkAndAdvance(next);
 }
 
-/**
- * Swapping tiles on your OWN shelf does NOT end your turn!
- * Player can rearrange tiles freely anytime during their turn.
- */
 export function swapOwnShelfSlots(state: GameState, slotA: number, slotB: number): GameState {
   if (slotA === slotB) return state;
   const players = state.players.map(p => ({ ...p, shelf: [...p.shelf] }));
@@ -160,11 +156,16 @@ export function swapOwnShelfSlots(state: GameState, slotA: number, slotB: number
   players[state.currentTurnIndex] = player;
   const next = { ...state, players, lastAction: 'rearrange' };
 
-  // Only end round if this rearrangement completes the win pattern! Otherwise keep turn.
-  if (player.mission && checkWin(player, next)) {
-    return endRound(next, player.id);
+  return checkAnyPlayerWin(next);
+}
+
+export function claimWin(state: GameState, playerId: string): GameState {
+  const player = state.players.find(p => p.id === playerId);
+  if (!player) return state;
+  if (checkWin(player, state)) {
+    return endRound(state, player.id);
   }
-  return next;
+  return state;
 }
 
 export function discardDrawnTile(state: GameState): GameState {
@@ -218,9 +219,19 @@ export function executePushAction(state: GameState, targetId: string, targetSlot
   return checkAndAdvance({ ...state, players, drawnTile: null, actionPhase: 'IDLE' as ActionPhase, selectedOwnSlot: null, selectedTargetPlayerId: null, selectedTargetSlot: null, lastAction: 'push' });
 }
 
+function checkAnyPlayerWin(state: GameState): GameState {
+  for (const p of state.players) {
+    if (checkWin(p, state)) {
+      return endRound(state, p.id);
+    }
+  }
+  return state;
+}
+
 function checkAndAdvance(state: GameState): GameState {
-  const p = state.players[state.currentTurnIndex];
-  if (p.mission && checkWin(p, state)) return endRound(state, p.id);
+  for (const p of state.players) {
+    if (checkWin(p, state)) return endRound(state, p.id);
+  }
   return advanceTurn(state);
 }
 

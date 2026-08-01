@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { GameState, ActionPhase } from '../../types/game';
 import { TileComponent } from '../Tile/Tile';
 import { useGameStore } from '../../store/gameStore';
+import { checkWin } from '../../engine/validators';
 
 interface ActionPanelProps {
   state: GameState;
@@ -14,14 +15,18 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
     confirmSwitch,
     confirmSteal,
     confirmPush,
+    claimWin,
   } = useGameStore();
 
   const [, setStealOwnSlot] = useState<number | null>(null);
+  const [claimFeedback, setClaimFeedback] = useState<string | null>(null);
 
   const currentPlayer = state.players[state.currentTurnIndex];
+  const humanPlayer = state.players.find(p => p.type === 'HUMAN') ?? currentPlayer;
   const { drawnTile, actionPhase, selectedOwnSlot, selectedTargetPlayerId, selectedTargetSlot } = state;
 
   const isHumanTurn = currentPlayer.type === 'HUMAN';
+  const isHumanWinReady = checkWin(humanPlayer, state);
 
   const phaseInstructions: Record<ActionPhase, string> = {
     IDLE: 'שלוף אריח מהקופה או מההשלכות',
@@ -33,22 +38,62 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
     PUSH_RESOLVE: 'נסחפת! השתמש באריח שנשלף כדי למלא את המשבצת',
   };
 
+  const handleClaimWinClick = () => {
+    if (isHumanWinReady) {
+      claimWin(humanPlayer.id);
+    } else {
+      setClaimFeedback('המדף עדיין לא תואם ב-100% לכרטיס המשימה! המשך לסדר');
+      setTimeout(() => setClaimFeedback(null), 3000);
+    }
+  };
+
   return (
-    <div className="flex flex-col items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/10 w-full">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={actionPhase}
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 8 }}
+    <div className="flex flex-col items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/10 w-full" dir="rtl">
+      {/* Top Banner & Claim Win Button */}
+      <div className="flex items-center justify-between w-full gap-2 flex-wrap">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={actionPhase}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className={`
+              text-xs font-semibold px-3 py-1.5 rounded-full flex-1 text-center
+              ${actionPhase === 'IDLE' ? 'bg-white/10 text-white/60' : 'bg-yellow-500/20 text-yellow-300'}
+            `}
+          >
+            {isHumanTurn ? phaseInstructions[actionPhase] : '🤖 ה-AI חושב…'}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Prominent "סיימתי!" Button */}
+        <motion.button
+          onClick={handleClaimWinClick}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           className={`
-            text-sm font-semibold text-center px-4 py-1.5 rounded-full
-            ${actionPhase === 'IDLE' ? 'bg-white/10 text-white/60' : 'bg-yellow-500/20 text-yellow-300'}
+            px-4 py-1.5 rounded-xl font-black text-sm shadow-lg transition-all flex items-center gap-1.5
+            ${isHumanWinReady
+              ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-slate-950 animate-bounce ring-2 ring-green-300'
+              : 'bg-yellow-400/20 hover:bg-yellow-400/40 text-yellow-300 border border-yellow-400/40'
+            }
           `}
         >
-          {isHumanTurn ? phaseInstructions[actionPhase] : '🤖 ה-AI חושב…'}
+          <span>🏆</span>
+          <span>סיימתי!</span>
+        </motion.button>
+      </div>
+
+      {/* Claim Win Feedback toast */}
+      {claimFeedback && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-xs text-orange-300 bg-orange-500/20 px-3 py-1 rounded-lg border border-orange-500/30 text-center font-medium"
+        >
+          {claimFeedback}
         </motion.div>
-      </AnimatePresence>
+      )}
 
       <div className="flex items-center justify-center gap-6">
         {drawnTile && (
