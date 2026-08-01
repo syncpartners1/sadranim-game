@@ -107,6 +107,33 @@ export function convertHumanToAI(state: GameState, playerId: string): GameState 
   };
 }
 
+/**
+ * Restores an AI bot back to a Human player when the player returns.
+ */
+export function convertAIToHuman(state: GameState, playerId: string): GameState {
+  const players = state.players.map(p => {
+    if (p.id === playerId && p.type === 'AI') {
+      const cleanName = p.name.replace(/\s*\(Bot\)/i, '');
+      return {
+        ...p,
+        name: cleanName || 'You',
+        type: 'HUMAN' as const,
+        aiLevel: undefined,
+        aiPersonality: undefined,
+        lastActiveTimestamp: Date.now(),
+      };
+    }
+    return p;
+  });
+
+  return {
+    ...state,
+    players,
+    turnStartTimestamp: Date.now(),
+    lastAction: 'reclaim_human',
+  };
+}
+
 export function drawFromPool(state: GameState): GameState {
   let pool = [...state.drawPool];
   let allDiscarded = [...state.allDiscarded];

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import type { GameState } from '../../types/game';
 import { Shelf } from '../Shelf/Shelf';
 import { DrawPool } from '../DrawPool/DrawPool';
@@ -21,6 +22,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
     selectOwnSlot,
     selectTargetSlot,
     checkAFKTimeout,
+    reclaimHumanPlayer,
   } = useGameStore();
 
   const [selectedMobileOpponentIdx, setSelectedMobileOpponentIdx] = useState<number>(0);
@@ -30,6 +32,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
   const currentPlayer = state.players[state.currentTurnIndex];
   const isHumanTurn = currentPlayer.type === 'HUMAN';
   const { actionPhase, selectedTargetPlayerId, turnStartTimestamp } = state;
+
+  // Find human player slot
+  const human = state.players.find(p => p.type === 'HUMAN') ?? state.players[0];
+  const humanIdx = state.players.indexOf(human);
+  const isHumanBotControlled = human.name.includes('(Bot)');
 
   useEffect(() => {
     if (state.gameStatus !== 'PLAYING') return;
@@ -60,6 +67,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
   }
 
   function handleShelfSlotClick(playerIndex: number, slotIndex: number) {
+    if (isHumanBotControlled) {
+      reclaimHumanPlayer(human.id);
+    }
     const player = state.players[playerIndex];
     if (playerIndex === state.currentTurnIndex) {
       if (canPlace) {
@@ -74,10 +84,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
     }
   }
 
-  const human = state.players.find(p => p.type === 'HUMAN') ?? state.players[0];
-  const humanIdx = state.players.indexOf(human);
   const opponents = state.players.filter((_, i) => i !== humanIdx);
-
   const activeMobileOpponent = opponents[selectedMobileOpponentIdx] ?? opponents[0];
 
   const remainingAFKSeconds = Math.max(0, 300 - elapsedSeconds);
@@ -87,12 +94,25 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col p-3 gap-4 overflow-auto" dir="rtl">
 
-      {/* Top Navbar with Rules Button */}
-      <div className="flex items-center justify-between px-2 py-1 bg-black/40 rounded-xl border border-white/10">
+      {/* Top Navbar with Rules & Reclaim Button */}
+      <div className="flex items-center justify-between px-2 py-1 bg-black/40 rounded-xl border border-white/10 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <img src="/assets/Logo.png" alt="הסדרנים" className="h-7 rounded" />
           <span className="text-yellow-400 font-black text-sm">הסדרנים</span>
         </div>
+
+        {/* If player was converted to bot, show a Reclaim button */}
+        {isHumanBotControlled && (
+          <motion.button
+            onClick={() => reclaimHumanPlayer(human.id)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="px-3 py-1 bg-green-500 hover:bg-green-400 text-slate-950 rounded-lg text-xs font-black shadow-lg animate-pulse"
+          >
+            👋 חזרתי! בטל את הבוט וקח שליטה בחזרה
+          </motion.button>
+        )}
+
         <button
           onClick={() => setIsRulesOpen(true)}
           className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg text-xs font-bold border border-blue-500/30 transition-all flex items-center gap-1"
@@ -200,8 +220,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
         <div className="bg-black/40 rounded-3xl p-4 border border-white/10 shadow-xl flex flex-col items-center gap-2">
           <DrawPool
             state={state}
-            onDrawPool={doDrawPool}
-            onDrawDiscard={drawNeighbourDiscard}
+            onDrawPool={() => {
+              if (isHumanBotControlled) reclaimHumanPlayer(human.id);
+              doDrawPool();
+            }}
+            onDrawDiscard={() => {
+              if (isHumanBotControlled) reclaimHumanPlayer(human.id);
+              drawNeighbourDiscard();
+            }}
             canDrawDiscard={canDrawFromNeighbourDiscard(state)}
             disabled={!canDraw}
           />
@@ -222,7 +248,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
         <div className="flex items-start justify-center gap-6 flex-wrap max-w-3xl w-full">
           {/* Your Shelf Board */}
           <div className="flex flex-col items-center gap-1">
-            <span className="text-yellow-300 font-bold text-xs">🛒 המדף שלך</span>
+            <div className="flex items-center gap-2">
+              <span className="text-yellow-300 font-bold text-xs">🛒 המדף שלך</span>
+              {isHumanBotControlled && (
+                <span className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded-full font-semibold animate-pulse">
+                  🤖 בוט פועל כרגע בשמך
+                </span>
+              )}
+            </div>
             <div className="rounded-2xl p-1 bg-white/5 border border-white/10 shadow-xl">
               <Shelf
                 player={human}

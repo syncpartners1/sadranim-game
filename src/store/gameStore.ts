@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { GameState, GameSettings, ActionPhase } from '../types/game';
-import { setupGame, drawFromPool, drawFromNeighbourDiscard, placeTileOnShelf, discardDrawnTile, executeSwitchAction, executePushAction, startNextRound, swapOwnShelfSlots, claimWin as claimWinEngine, convertHumanToAI } from '../engine/gameEngine';
+import { setupGame, drawFromPool, drawFromNeighbourDiscard, placeTileOnShelf, discardDrawnTile, executeSwitchAction, executePushAction, startNextRound, swapOwnShelfSlots, claimWin as claimWinEngine, convertHumanToAI, convertAIToHuman } from '../engine/gameEngine';
 import { aiTakeTurn } from '../engine/aiPlayer';
 import { saveRoomStateToFirestore, subscribeToRoomFirestore, fetchRoomStateFromFirestore } from '../services/roomSync';
 
@@ -12,6 +12,7 @@ interface GameStore {
   startGame: () => void;
   joinRoom: (roomCode: string) => Promise<boolean>;
   togglePlayerReady: (playerId: string) => void;
+  reclaimHumanPlayer: (playerId: string) => void;
   drawPool: () => void;
   drawNeighbourDiscard: () => void;
   placeOnShelf: (slot: number) => void;
@@ -29,7 +30,7 @@ interface GameStore {
 }
 
 const DEFAULT: GameSettings = { playerCount: 2, humanCount: 1, aiLevel: 'MEDIUM', useTelegramNames: false };
-const AI_DELAY = 700; // Fast AI response (< 1 second)
+const AI_DELAY = 700;
 const AFK_TIMEOUT_MS = 300 * 1000;
 
 let unsubscribeRoom: (() => void) | null = null;
@@ -70,6 +71,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ state: s });
     saveRoomStateToFirestore(s);
     if (nextStatus === 'PLAYING') scheduleAI(s, set, get);
+  },
+
+  reclaimHumanPlayer: (playerId: string) => {
+    const { state } = get();
+    if (!state) return;
+    const s = convertAIToHuman(state, playerId);
+    set({ state: s, isAIThinking: false });
+    saveRoomStateToFirestore(s);
   },
 
   drawPool: () => {
