@@ -24,6 +24,13 @@ export const DrawPool: React.FC<DrawPoolProps> = ({
   const prevNeighbour = state.players[prevNeighbourIdx];
   const topDiscard = prevNeighbour?.discardPile?.[0];
 
+  // If player just drew a tile from the neighbour's discard pile, display that EXACT drawn tile
+  const activeDiscardTile = (state.drawnFromDiscard && state.drawnTile)
+    ? state.drawnTile
+    : topDiscard;
+
+  const isDrawnInHand = state.drawnFromDiscard && !!state.drawnTile;
+
   return (
     <div className="flex items-center justify-center gap-6 md:gap-10 p-2" dir="rtl">
       {/* 1. DRAW POOL (Central Stack) */}
@@ -61,7 +68,21 @@ export const DrawPool: React.FC<DrawPoolProps> = ({
         <span className="text-white/70 text-xs font-bold uppercase tracking-wider">
           אריח מהשכן ({prevNeighbour?.name})
         </span>
-        {canDrawDiscard && topDiscard ? (
+
+        {isDrawnInHand && state.drawnTile ? (
+          /* Show drawn tile in hand with explicit mandatory shelf placement badge */
+          <div className="relative flex flex-col items-center">
+            <TileComponent
+              tile={state.drawnTile}
+              size="lg"
+              selected
+            />
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-yellow-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full shadow border border-yellow-300 whitespace-nowrap animate-bounce">
+              נלקח ➔ בחר משבצת במדף
+            </div>
+          </div>
+        ) : canDrawDiscard && topDiscard ? (
+          /* Show available neighbour discard tile with Take button */
           <motion.div
             className="cursor-pointer relative group"
             whileHover={!disabled ? { scale: 1.08 } : {}}
@@ -79,6 +100,7 @@ export const DrawPool: React.FC<DrawPoolProps> = ({
             </div>
           </motion.div>
         ) : (
+          /* Empty placeholder */
           <div className="w-20 h-20 rounded-xl border-2 border-dashed border-white/20 flex flex-col items-center justify-center bg-white/5">
             <span className="text-white/30 text-xs font-medium text-center">אין אריח</span>
           </div>
