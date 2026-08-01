@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import type { AILevel } from '../../types/game';
 import { getShareableUrl, getWhatsAppShareUrl, getTelegramShareUrl } from '../../services/roomSync';
+import { RulesModal } from '../RulesModal/RulesModal';
 
 export const Lobby: React.FC = () => {
   const { settings, updateSettings, startGame, state, joinRoom, togglePlayerReady } = useGameStore();
@@ -11,8 +12,8 @@ export const Lobby: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [isRulesOpen, setIsRulesOpen] = useState(false);
 
-  // Check URL query parameters for auto-joining room (e.g. ?room=SADR8)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const roomParam = params.get('room');
@@ -64,6 +65,14 @@ export const Lobby: React.FC = () => {
           <p className="text-white/50 text-xs text-center">משחק סידור מדפים בסופרמרקט בזמן אמת</p>
         </div>
 
+        {/* ── BUTTON TO OPEN HOW TO PLAY INSTRUCTIONS ── */}
+        <button
+          onClick={() => setIsRulesOpen(true)}
+          className="w-full py-2.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-2xl border border-blue-500/30 text-xs font-bold flex items-center justify-center gap-2 transition-all shadow"
+        >
+          <span>📖</span> לחץ כאן לקריאת הוראות המשחק (איך משחקים?)
+        </button>
+
         {/* ── ROOM INVITATION & SHARE ENGINE ── */}
         <div className="bg-black/40 rounded-2xl p-4 border border-white/10 flex flex-col gap-3">
           <div className="flex items-center justify-between">
@@ -76,7 +85,6 @@ export const Lobby: React.FC = () => {
           <div className="text-xs text-white/50 font-medium">שתף והזמן שחקנים אנושיים לחדר:</div>
 
           <div className="grid grid-cols-3 gap-2">
-            {/* WhatsApp Invite */}
             <a
               href={whatsappUrl}
               target="_blank"
@@ -86,7 +94,6 @@ export const Lobby: React.FC = () => {
               <span>💬</span> WhatsApp
             </a>
 
-            {/* Telegram Invite */}
             <a
               href={telegramUrl}
               target="_blank"
@@ -96,7 +103,6 @@ export const Lobby: React.FC = () => {
               <span>✈️</span> Telegram
             </a>
 
-            {/* Copy Link */}
             <button
               onClick={handleCopyLink}
               className="py-2 px-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 border border-white/20 transition-all"
@@ -227,15 +233,28 @@ export const Lobby: React.FC = () => {
           </>
         )}
 
-        <details className="text-white/40 text-xs">
-          <summary className="cursor-pointer text-white/60 font-medium">חוקים ומנגנון AFK</summary>
-          <ul className="mt-2 space-y-1 list-disc list-inside leading-relaxed text-right">
-            <li>שתף את הקישור לחדר ב-WhatsApp או Telegram להזמנת חברים</li>
-            <li>המשחק יתחיל רק לאחר שכל השחקנים המוזמנים מאשרים</li>
-            <li>שחקן שלא מבצע מהלך 5 דקות (או מתנתק) — מנוע ה-AI יחליף אותו כבוט!</li>
+        {/* ── ALWAYS VISIBLE SUMMARY OF GAME RULES ── */}
+        <div className="bg-black/30 rounded-2xl p-4 border border-white/10 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-yellow-300 font-bold text-xs">📖 תמצית חוקי המשחק:</span>
+            <button
+              onClick={() => setIsRulesOpen(true)}
+              className="text-[11px] text-blue-300 underline font-semibold"
+            >
+              להסבר המלא ←
+            </button>
+          </div>
+          <ul className="text-white/70 text-[11px] space-y-1 list-disc list-inside leading-relaxed">
+            <li>סדר את 8 האריחים במדף הסופרמרקט שלך בהתאמה לכרטיס המשימה.</li>
+            <li>שלוף קלף מהקופה או קח את האריח שהשכן מימינך זרק להשלכות.</li>
+            <li>ניתן להחליף מיקומים במדף שלך (Drag & Drop) חופשי ללא איבוד תור!</li>
+            <li>🔴 Push 🔵 Switch 💛 Steal ⭐ Sale (ג'וקר חליפי למוצר - עד 1 למדף).</li>
           </ul>
-        </details>
+        </div>
       </motion.div>
+
+      {/* ── FULL RULES MODAL ── */}
+      <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
     </div>
   );
 };

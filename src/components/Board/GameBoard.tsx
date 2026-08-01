@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import type { GameState } from '../../types/game';
 import { Shelf } from '../Shelf/Shelf';
 import { DrawPool } from '../DrawPool/DrawPool';
 import { ActionPanel } from '../ActionPanel/ActionPanel';
 import { MissionCardComponent } from '../MissionCard/MissionCard';
+import { RulesModal } from '../RulesModal/RulesModal';
 import { useGameStore } from '../../store/gameStore';
 import { canDrawFromNeighbourDiscard, getAdjacentPlayerIndices } from '../../engine/validators';
 
@@ -25,12 +25,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
 
   const [selectedMobileOpponentIdx, setSelectedMobileOpponentIdx] = useState<number>(0);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+  const [isRulesOpen, setIsRulesOpen] = useState<boolean>(false);
 
   const currentPlayer = state.players[state.currentTurnIndex];
   const isHumanTurn = currentPlayer.type === 'HUMAN';
   const { actionPhase, selectedTargetPlayerId, turnStartTimestamp } = state;
 
-  // AFK Timer Hook — checks every second, triggers AI takeover after 5 minutes (300s)
   useEffect(() => {
     if (state.gameStatus !== 'PLAYING') return;
 
@@ -38,8 +38,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
       const now = Date.now();
       const elapsed = Math.floor((now - (turnStartTimestamp || now)) / 1000);
       setElapsedSeconds(elapsed);
-
-      // Check AFK timeout
       checkAFKTimeout();
     }, 1000);
 
@@ -82,13 +80,26 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
 
   const activeMobileOpponent = opponents[selectedMobileOpponentIdx] ?? opponents[0];
 
-  // 5-minute AFK remaining timer
   const remainingAFKSeconds = Math.max(0, 300 - elapsedSeconds);
   const afkMinutes = Math.floor(remainingAFKSeconds / 60);
   const afkSecs = remainingAFKSeconds % 60;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col p-3 gap-4 overflow-auto" dir="rtl">
+
+      {/* Top Navbar with Rules Button */}
+      <div className="flex items-center justify-between px-2 py-1 bg-black/40 rounded-xl border border-white/10">
+        <div className="flex items-center gap-2">
+          <img src="/assets/Logo.png" alt="הסדרנים" className="h-7 rounded" />
+          <span className="text-yellow-400 font-black text-sm">הסדרנים</span>
+        </div>
+        <button
+          onClick={() => setIsRulesOpen(true)}
+          className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg text-xs font-bold border border-blue-500/30 transition-all flex items-center gap-1"
+        >
+          <span>📖</span> איך משחקים?
+        </button>
+      </div>
 
       {/* ── 1. TOP SECTION: OPPONENT SHELVES ────────────────────── */}
 
@@ -194,7 +205,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
             canDrawDiscard={canDrawFromNeighbourDiscard(state)}
             disabled={!canDraw}
           />
-          {/* AFK Timer display for current turn */}
           {isHumanTurn && (
             <span className="text-[10px] text-white/40 font-mono">
               ⏱ זמן תור נותר: {afkMinutes}:{afkSecs < 10 ? `0${afkSecs}` : afkSecs} (מעבר ל-AI ב-5 דקות)
@@ -252,9 +262,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
           <span>•</span>
           <span>{state.drawPool.length} אריחים בקופה</span>
           <span>•</span>
-          <span>{state.missionsPool.length} משימות נותרו</span>
+          <button onClick={() => setIsRulesOpen(true)} className="text-yellow-300 underline font-semibold">
+            📖 איך משחקים?
+          </button>
         </div>
       </div>
+
+      {/* Rules Modal */}
+      <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
     </div>
   );
 };
