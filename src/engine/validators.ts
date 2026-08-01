@@ -1,14 +1,13 @@
-import type { Player, GameState, Tile } from '../types/game';
+import type { Player, GameState, Tile, ProductId } from '../types/game';
 
 /**
  * Checks whether a player's shelf matches their secret mission card.
  * Rules:
  *   1. All 8 slots must be filled (no nulls).
  *   2. No PUSH placeholder active.
- *   3. At most 1 SALE (מבצע) tile allowed on the shelf!
- *   4. A SALE tile acts as a wildcard for ANY required product at its position.
- *   5. Action/Obstacle tiles (SWITCH, PUSH, EMPTYBOX) cannot remain on shelf for a win!
- *   6. All other 7 slots must match the exact product required by the mission pattern.
+ *   3. At most 1 SALE (מבצע) tile allowed on the shelf.
+ *   4. Action/Obstacle tiles (SWITCH, PUSH, EMPTYBOX) cannot remain on shelf for a win!
+ *   5. A SALE tile acts as a wildcard for ANY required product on the mission card.
  */
 export function checkWin(player: Player, _state?: GameState): boolean {
   const { shelf, mission, hasPushPlaceholder } = player;
@@ -26,24 +25,43 @@ export function checkWin(player: Player, _state?: GameState): boolean {
   const saleTiles = shelfTiles.filter(t => t.type === 'SALE');
   if (saleTiles.length > 1) return false;
 
-  let productMismatches = 0;
+  const saleCount = saleTiles.length;
+
+  // 1. Direct Slot-by-Slot Alignment Check
+  let slotMatches = 0;
   for (let i = 0; i < 8; i++) {
     const tile = shelfTiles[i];
     const targetProduct = mission.pattern[i];
 
-    if (tile.type === 'SALE') {
-      // SALE tile replaces whichever product is required at position i (Wildcard)
-      continue;
-    } else if (tile.type === 'PRODUCT' && tile.productId === targetProduct) {
-      // Correct matching product
-      continue;
-    } else {
-      // Product mismatch or invalid tile
-      productMismatches++;
+    if (tile.type === 'SALE' || (tile.type === 'PRODUCT' && tile.productId === targetProduct)) {
+      slotMatches++;
     }
   }
 
-  return productMismatches === 0;
+  if (slotMatches === 8) return true;
+
+  // 2. Flexible Multiset Check (Supports SALE wildcard replacing any missing required product)
+  const requiredCounts: Record<string, number> = {};
+  for (const pid of mission.pattern) {
+    requiredCounts[pid] = (requiredCounts[pid] || 0) + 1;
+  }
+
+  let matchedProductCount = 0;
+  const availableProductCounts: Record<string, number> = {};
+  for (const tile of shelfTiles) {
+    if (tile.type === 'PRODUCT' && tile.productId) {
+      availableProductCounts[tile.productId] = (availableProductCounts[tile.productId] || 0) + 1;
+    }
+  }
+
+  for (const pid in requiredCounts) {
+    const req = requiredCounts[pid];
+    const avail = availableProductCounts[pid] || 0;
+    matchedProductCount += Math.min(req, avail);
+  }
+
+  // If matched product tiles + SALE wildcard >= 8, it's a 100% valid WIN!
+  return (matchedProductCount + saleCount) >= 8;
 }
 
 /**
