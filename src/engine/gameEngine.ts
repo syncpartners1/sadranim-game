@@ -45,7 +45,7 @@ export function setupGame(settings: GameSettings): GameState {
       if (tile.type === 'PUSH' || tile.type === 'SWITCH' || tile.type === 'STEAL') {
         drawPool.unshift(tile);
       } else {
-        shelf.push(tile);
+        shelf.push({ ...tile });
       }
     }
     player.shelf = shelf;
@@ -108,7 +108,8 @@ export function drawFromPool(state: GameState): GameState {
     allDiscarded = [];
   }
 
-  const tile = { ...pool.pop()! };
+  const rawTile = pool.pop()!;
+  const tile = { ...rawTile };
   const currentPlayer = state.players[state.currentTurnIndex];
 
   let actionPhase: ActionPhase = 'TILE_DRAWN';
@@ -138,9 +139,8 @@ export function drawFromNeighbourDiscard(state: GameState): GameState {
   const prevIdx = getPreviousPlayerIndex(state);
   if (players[prevIdx].discardPile.length === 0) return state;
 
-  // Pull the top (most recent) discarded tile from the previous player's discard pile
   const rawTile = players[prevIdx].discardPile.shift()!;
-  const tile = { ...rawTile }; // Deep clone to preserve tile metadata and image
+  const tile = { ...rawTile };
   const currentPlayer = players[state.currentTurnIndex];
 
   let actionPhase: ActionPhase = 'TILE_DRAWN';
@@ -171,19 +171,18 @@ export function placeTileOnShelf(state: GameState, slotIndex: number): GameState
     }
   }
 
+  const tileToPlace = { ...state.drawnTile };
+  const displaced = player.shelf[slotIndex];
+
+  player.shelf[slotIndex] = tileToPlace;
+
   if (state.actionPhase === 'PUSH_RESOLVE' && player.hasPushPlaceholder) {
-    if (slotIndex !== player.pushSlotIndex) return state;
-    const displaced = player.shelf[slotIndex];
-    player.shelf[slotIndex] = state.drawnTile;
     player.hasPushPlaceholder = false;
     player.pushSlotIndex = null;
-    if (displaced && displaced.type !== 'PUSH') {
-      player.discardPile = [displaced, ...player.discardPile];
-    }
-  } else {
-    const displaced = player.shelf[slotIndex];
-    player.shelf[slotIndex] = state.drawnTile;
-    if (displaced) player.discardPile = [displaced, ...player.discardPile];
+  }
+
+  if (displaced && displaced.type !== 'PUSH') {
+    player.discardPile = [{ ...displaced }, ...player.discardPile];
   }
 
   players[state.currentTurnIndex] = player;
@@ -202,8 +201,8 @@ export function swapOwnShelfSlots(state: GameState, slotA: number, slotB: number
   const players = state.players.map(p => ({ ...p, shelf: [...p.shelf] }));
   const player = players[state.currentTurnIndex];
 
-  const temp = player.shelf[slotA];
-  player.shelf[slotA] = player.shelf[slotB];
+  const temp = player.shelf[slotA] ? { ...player.shelf[slotA]! } : null;
+  player.shelf[slotA] = player.shelf[slotB] ? { ...player.shelf[slotB]! } : null;
   player.shelf[slotB] = temp;
 
   if (player.hasPushPlaceholder) {
@@ -230,7 +229,7 @@ export function discardDrawnTile(state: GameState): GameState {
   if (!state.drawnTile || state.drawnFromDiscard) return state;
 
   const players = state.players.map(p => ({ ...p, discardPile: [...p.discardPile] }));
-  players[state.currentTurnIndex].discardPile = [state.drawnTile, ...players[state.currentTurnIndex].discardPile];
+  players[state.currentTurnIndex].discardPile = [{ ...state.drawnTile }, ...players[state.currentTurnIndex].discardPile];
   return advanceTurn({ ...state, players, drawnTile: null, drawnFromDiscard: false, actionPhase: 'IDLE' as ActionPhase });
 }
 
@@ -240,7 +239,13 @@ export function executeSwitchAction(state: GameState, ownSlot: number, targetId:
   const tIdx = players.findIndex(p => p.id === targetId);
   if (tIdx < 0) return state;
   const tgt = players[tIdx];
-  [cur.shelf[ownSlot], tgt.shelf[targetSlot]] = [tgt.shelf[targetSlot], cur.shelf[ownSlot]];
+
+  const ownTile = cur.shelf[ownSlot] ? { ...cur.shelf[ownSlot]! } : null;
+  const targetTile = tgt.shelf[targetSlot] ? { ...tgt.shelf[targetSlot]! } : null;
+
+  cur.shelf[ownSlot] = targetTile;
+  tgt.shelf[targetSlot] = ownTile;
+
   players[state.currentTurnIndex] = cur;
   players[tIdx] = tgt;
   return checkAndAdvance({
@@ -272,7 +277,7 @@ export function executeStealAction(state: GameState, targetId: string, targetSlo
   const displaced = cur.shelf[ownSlot];
   cur.shelf[ownSlot] = { ...stolen };
   tgt.shelf[targetSlot] = null;
-  if (displaced) cur.discardPile = [displaced, ...cur.discardPile];
+  if (displaced) cur.discardPile = [{ ...displaced }, ...cur.discardPile];
   players[state.currentTurnIndex] = cur;
   players[tIdx] = tgt;
   return checkAndAdvance({
@@ -295,7 +300,8 @@ export function executePushAction(state: GameState, targetId: string, targetSlot
   const tgt = players[tIdx];
   const pushed = tgt.shelf[targetSlot];
   if (!pushed) return state;
-  tgt.discardPile = [pushed, ...tgt.discardPile];
+
+  tgt.discardPile = [{ ...pushed }, ...tgt.discardPile];
   tgt.shelf[targetSlot] = { ...PUSH_PLACEHOLDER, id: `push-ph-${generateId()}` };
   tgt.hasPushPlaceholder = true;
   tgt.pushSlotIndex = targetSlot;
@@ -380,7 +386,7 @@ function endRound(state: GameState, winnerId: string): GameState {
       if (tile.type === 'PUSH' || tile.type === 'SWITCH' || tile.type === 'STEAL') {
         drawPool.unshift(tile);
       } else {
-        shelf.push(tile);
+        shelf.push({ ...tile });
       }
     }
     rp.shelf = shelf;

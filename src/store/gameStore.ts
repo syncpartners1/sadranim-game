@@ -31,7 +31,7 @@ interface GameStore {
 
 const DEFAULT: GameSettings = { playerCount: 2, humanCount: 1, aiLevel: 'MEDIUM', useTelegramNames: false };
 const AI_DELAY = 900;
-const AFK_TIMEOUT_MS = 300 * 1000; // 5 minutes AFK timeout
+const AFK_TIMEOUT_MS = 300 * 1000;
 
 let unsubscribeRoom: (() => void) | null = null;
 
@@ -46,7 +46,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const s = setupGame(get().settings);
     set({ state: s });
     saveRoomStateToFirestore(s);
-    setupFirestoreSubscription(s.roomCode, set);
+    setupFirestoreSubscription(s.roomCode, set, get);
     scheduleAI(s, set, get);
   },
 
@@ -54,7 +54,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const remoteState = await fetchRoomStateFromFirestore(roomCode);
     if (remoteState) {
       set({ state: remoteState, settings: { ...get().settings, roomCode } });
-      setupFirestoreSubscription(roomCode, set);
+      setupFirestoreSubscription(roomCode, set, get);
       scheduleAI(remoteState, set, get);
       return true;
     }
@@ -185,7 +185,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (current?.type === 'HUMAN') {
       const elapsed = Date.now() - (state.turnStartTimestamp || Date.now());
       if (elapsed >= AFK_TIMEOUT_MS) {
-        // Player has been AFK for > 5 minutes! Convert to AI Bot and continue
         const s = convertHumanToAI(state, current.id);
         set({ state: s });
         saveRoomStateToFirestore(s);
@@ -197,9 +196,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setTelegramUser: (user) => set(st => ({ state: st.state ? { ...st.state, telegramUser: user } : null })),
 }));
 
-function setupFirestoreSubscription(roomCode: string, set: any) {
+function setupFirestoreSubscription(roomCode: string, set: any, get: any) {
   if (unsubscribeRoom) unsubscribeRoom();
   unsubscribeRoom = subscribeToRoomFirestore(roomCode, (newState) => {
+    const current = get().state;
+    // Guard against stale Firestore snapshot overwriting fresh in-memory drawn tile / action
+    if (current && current.drawnTile && !newState.drawnTile && current.currentTurnIndex === newState.currentTurnIndex) {
+      return;
+    }
     set(() => ({ state: newState }));
   });
 }
