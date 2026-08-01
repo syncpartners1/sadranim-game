@@ -1,6 +1,6 @@
 import type { GameState, Player, Tile, GameSettings, ActionPhase } from '../types/game';
 import { createTilePool, MISSION_CARDS, PUSH_PLACEHOLDER } from '../data/tiles';
-import { checkWin, getPreviousPlayerIndex } from './validators';
+import { checkWin, getPreviousPlayerIndex } from './validators.ts';
 import { generateRoomCode } from '../services/roomSync';
 import { BOT_PROFILES } from './aiPlayer';
 
@@ -107,9 +107,6 @@ export function convertHumanToAI(state: GameState, playerId: string): GameState 
   };
 }
 
-/**
- * Restores an AI bot back to a Human player when the player returns.
- */
 export function convertAIToHuman(state: GameState, playerId: string): GameState {
   const players = state.players.map(p => {
     if (p.id === playerId && p.type === 'AI') {
