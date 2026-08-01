@@ -139,6 +139,10 @@ export function placeTileOnShelf(state: GameState, slotIndex: number): GameState
   return checkAndAdvance(next);
 }
 
+/**
+ * Swapping tiles on your OWN shelf does NOT end your turn!
+ * Player can rearrange tiles freely anytime during their turn.
+ */
 export function swapOwnShelfSlots(state: GameState, slotA: number, slotB: number): GameState {
   if (slotA === slotB) return state;
   const players = state.players.map(p => ({ ...p, shelf: [...p.shelf] }));
@@ -148,7 +152,6 @@ export function swapOwnShelfSlots(state: GameState, slotA: number, slotB: number
   player.shelf[slotA] = player.shelf[slotB];
   player.shelf[slotB] = temp;
 
-  // Update push slot index if push placeholder was moved
   if (player.hasPushPlaceholder) {
     if (player.pushSlotIndex === slotA) player.pushSlotIndex = slotB;
     else if (player.pushSlotIndex === slotB) player.pushSlotIndex = slotA;
@@ -156,7 +159,12 @@ export function swapOwnShelfSlots(state: GameState, slotA: number, slotB: number
 
   players[state.currentTurnIndex] = player;
   const next = { ...state, players, lastAction: 'rearrange' };
-  return checkAndAdvance(next);
+
+  // Only end round if this rearrangement completes the win pattern! Otherwise keep turn.
+  if (player.mission && checkWin(player, next)) {
+    return endRound(next, player.id);
+  }
+  return next;
 }
 
 export function discardDrawnTile(state: GameState): GameState {

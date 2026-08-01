@@ -20,8 +20,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
     placeOnShelf,
     selectOwnSlot,
     selectTargetSlot,
-    activeTab,
-    setActiveTab,
+    toggleMissionModal,
   } = useGameStore();
 
   const currentPlayer = state.players[state.currentTurnIndex];
@@ -103,64 +102,68 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
         })}
       </div>
 
-      {/* ── MIDDLE: Draw pool or Mission Tab View ───────────────────── */}
+      {/* ── MIDDLE: Draw pool ──────────────────────────────────── */}
       <div className="flex justify-center">
-        {activeTab === 'mission' && human.mission ? (
-          <div className="bg-black/40 rounded-3xl p-6 border border-white/20 flex flex-col items-center gap-3 shadow-2xl max-w-sm w-full">
-            <div className="flex items-center justify-between w-full">
-              <span className="text-yellow-300 font-bold text-sm">🎯 Target Mission Pattern</span>
-              <button
-                onClick={() => setActiveTab('shelf')}
-                className="text-xs text-white/60 hover:text-white bg-white/10 px-2 py-1 rounded-lg"
-              >
-                ✕ Close
-              </button>
-            </div>
-            <MissionCardComponent mission={human.mission} revealed compact={false} />
-            <p className="text-xs text-white/60 text-center">
-              Match the 8 slots on your shelf to this exact layout!
-            </p>
-          </div>
-        ) : (
-          <div className="bg-black/30 rounded-2xl p-4 border border-white/10">
-            <DrawPool
-              state={state}
-              onDrawPool={doDrawPool}
-              onDrawDiscard={drawNeighbourDiscard}
-              canDrawDiscard={canDrawFromNeighbourDiscard(state)}
-              disabled={!canDraw}
-            />
-          </div>
-        )}
+        <div className="bg-black/30 rounded-2xl p-4 border border-white/10">
+          <DrawPool
+            state={state}
+            onDrawPool={doDrawPool}
+            onDrawDiscard={drawNeighbourDiscard}
+            canDrawDiscard={canDrawFromNeighbourDiscard(state)}
+            disabled={!canDraw}
+          />
+        </div>
       </div>
 
-      {/* ── BOTTOM: Human player area ───────────────────────────── */}
+      {/* ── BOTTOM: Player Area — Side-by-Side Shelf + Mission Card ── */}
       <div className="flex flex-col items-center gap-3 mt-auto">
-        <div className="w-full max-w-lg">
+        <div className="w-full max-w-xl">
           <ActionPanel state={state} />
         </div>
 
-        <motion.div
-          animate={state.currentTurnIndex === humanIdx
-            ? { boxShadow: ['0 0 0px #fde047', '0 0 20px #fde047', '0 0 0px #fde047'] }
-            : { boxShadow: 'none' }
-          }
-          transition={{ duration: 2, repeat: Infinity }}
-          className="rounded-2xl p-1"
-        >
-          <Shelf
-            player={human}
-            isCurrentPlayer={state.currentTurnIndex === humanIdx}
-            actionPhase={actionPhase}
-            allowRearrange={true}
-            onSlotClick={(slot) => handleShelfSlotClick(humanIdx, slot)}
-            highlightSlots={
-              human.hasPushPlaceholder && human.pushSlotIndex !== null
-                ? [human.pushSlotIndex]
-                : []
+        <div className="flex items-center justify-center gap-4 flex-wrap max-w-2xl w-full">
+          {/* Player Shelf (Left) */}
+          <motion.div
+            animate={state.currentTurnIndex === humanIdx
+              ? { boxShadow: ['0 0 0px #fde047', '0 0 20px #fde047', '0 0 0px #fde047'] }
+              : { boxShadow: 'none' }
             }
-          />
-        </motion.div>
+            transition={{ duration: 2, repeat: Infinity }}
+            className="rounded-2xl p-1 bg-white/5 border border-white/10"
+          >
+            <Shelf
+              player={human}
+              isCurrentPlayer={state.currentTurnIndex === humanIdx}
+              actionPhase={actionPhase}
+              allowRearrange={true}
+              onSlotClick={(slot) => handleShelfSlotClick(humanIdx, slot)}
+              highlightSlots={
+                human.hasPushPlaceholder && human.pushSlotIndex !== null
+                  ? [human.pushSlotIndex]
+                  : []
+              }
+            />
+          </motion.div>
+
+          {/* Mission Card (Right) — Side by side */}
+          {human.mission && (
+            <div className="flex flex-col items-center gap-2 p-3 bg-white/5 border border-white/10 rounded-2xl">
+              <div className="flex items-center gap-1">
+                <span className="text-yellow-300 font-bold text-xs">🎯 Target Mission</span>
+                <span className="text-white/40 text-[10px]">(Fixed)</span>
+              </div>
+              <MissionCardComponent
+                mission={human.mission}
+                revealed={true}
+                compact={false}
+                onClick={() => toggleMissionModal(true)}
+              />
+              <span className="text-[10px] text-white/50 text-center">
+                Click to expand
+              </span>
+            </div>
+          )}
+        </div>
 
         <div className="flex items-center gap-3 text-white/50 text-xs">
           <span>Round {state.roundNumber}</span>
