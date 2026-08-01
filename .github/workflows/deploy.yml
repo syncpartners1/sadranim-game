@@ -26,10 +26,9 @@ jobs:
         run: npm run build
 
       - name: Deploy to Firebase Hosting
-        env:
-          FIREBASE_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT || secrets.FIREBASE_SERVICE_ACCOUNT_SADRANIM_GAME || secrets.GCP_SA_KEY }}
-        run: |
-          echo "$FIREBASE_SA_KEY" > ./sa-deploy-key.json
-          export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/sa-deploy-key.json"
-          npx firebase-tools deploy --only hosting --project sadranim-game --non-interactive
-          rm -f ./sa-deploy-key.json
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_SADRANIM_GAME }}'
+          projectId: sadranim-game
+          channelId: live
