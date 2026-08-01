@@ -42,7 +42,6 @@ export function checkWin(player: Player, _state?: GameState): boolean {
     }
   }
 
-  // All non-SALE slots must match their target product exactly (productMismatches === 0)
   return productMismatches === 0;
 }
 
@@ -58,8 +57,9 @@ export function getSlotMatches(player: Player): boolean[] {
   });
 }
 
-export function getRightNeighbourIndex(state: GameState): number {
-  return (state.currentTurnIndex + 1) % state.players.length;
+export function getPreviousPlayerIndex(state: GameState): number {
+  const n = state.players.length;
+  return (state.currentTurnIndex - 1 + n) % n;
 }
 
 export function getAdjacentPlayerIndices(state: GameState): number[] {
@@ -69,5 +69,6 @@ export function getAdjacentPlayerIndices(state: GameState): number[] {
 }
 
 export function canDrawFromNeighbourDiscard(state: GameState): boolean {
-  return state.players[getRightNeighbourIndex(state)].discardPile.length > 0;
+  const prevIdx = getPreviousPlayerIndex(state);
+  return state.players[prevIdx]?.discardPile.length > 0;
 }

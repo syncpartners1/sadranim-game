@@ -1,6 +1,6 @@
 import type { GameState, Player, Tile, GameSettings, ActionPhase } from '../types/game';
 import { createTilePool, MISSION_CARDS, PUSH_PLACEHOLDER } from '../data/tiles';
-import { checkWin } from './validators';
+import { checkWin, getPreviousPlayerIndex } from './validators';
 import { generateRoomCode } from '../services/roomSync';
 
 export function shuffle<T>(arr: T[]): T[] {
@@ -79,9 +79,6 @@ export function setupGame(settings: GameSettings): GameState {
   };
 }
 
-/**
- * Converts a human player to an AI Bot (used when player is AFK > 5 minutes or disconnects).
- */
 export function convertHumanToAI(state: GameState, playerId: string): GameState {
   const players = state.players.map(p => {
     if (p.id === playerId && p.type === 'HUMAN') {
@@ -138,11 +135,12 @@ export function drawFromPool(state: GameState): GameState {
 
 export function drawFromNeighbourDiscard(state: GameState): GameState {
   const players = state.players.map(p => ({ ...p, discardPile: [...p.discardPile] }));
-  const rightIdx = (state.currentTurnIndex + 1) % players.length;
-  if (players[rightIdx].discardPile.length === 0) return state;
+  const prevIdx = getPreviousPlayerIndex(state);
+  if (players[prevIdx].discardPile.length === 0) return state;
 
-  const rawTile = players[rightIdx].discardPile.shift()!;
-  const tile = { ...rawTile };
+  // Pull the top (most recent) discarded tile from the previous player's discard pile
+  const rawTile = players[prevIdx].discardPile.shift()!;
+  const tile = { ...rawTile }; // Deep clone to preserve tile metadata and image
   const currentPlayer = players[state.currentTurnIndex];
 
   let actionPhase: ActionPhase = 'TILE_DRAWN';

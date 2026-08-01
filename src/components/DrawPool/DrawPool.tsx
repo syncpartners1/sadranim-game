@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import type { GameState } from '../../types/game';
 import { TileComponent, TileBack } from '../Tile/Tile';
 import { MissionPile } from '../MissionCard/MissionCard';
+import { getPreviousPlayerIndex } from '../../engine/validators';
 
 interface DrawPoolProps {
   state: GameState;
@@ -19,9 +20,9 @@ export const DrawPool: React.FC<DrawPoolProps> = ({
   canDrawDiscard,
   disabled,
 }) => {
-  const rightNeighbourIdx = (state.currentTurnIndex + 1) % state.players.length;
-  const rightNeighbour = state.players[rightNeighbourIdx];
-  const topDiscard = rightNeighbour?.discardPile?.[0];
+  const prevNeighbourIdx = getPreviousPlayerIndex(state);
+  const prevNeighbour = state.players[prevNeighbourIdx];
+  const topDiscard = prevNeighbour?.discardPile?.[0];
 
   return (
     <div className="flex items-center justify-center gap-6 md:gap-10 p-2" dir="rtl">
@@ -58,7 +59,7 @@ export const DrawPool: React.FC<DrawPoolProps> = ({
       {/* 2. DISCARD TILE FROM PREVIOUS PLAYER */}
       <div className="flex flex-col items-center gap-1.5">
         <span className="text-white/70 text-xs font-bold uppercase tracking-wider">
-          אריח מהשכן ({rightNeighbour?.name})
+          אריח מהשכן ({prevNeighbour?.name})
         </span>
         {canDrawDiscard && topDiscard ? (
           <motion.div
