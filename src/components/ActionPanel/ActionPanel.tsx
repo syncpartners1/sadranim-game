@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { GameState, ActionPhase } from '../../types/game';
 import { TileComponent } from '../Tile/Tile';
-import { MissionCardComponent, MissionCardModal } from '../MissionCard/MissionCard';
 import { useGameStore } from '../../store/gameStore';
 
 interface ActionPanelProps {
@@ -15,10 +14,6 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
     confirmSwitch,
     confirmSteal,
     confirmPush,
-    activeTab,
-    setActiveTab,
-    isMissionModalOpen,
-    toggleMissionModal,
   } = useGameStore();
 
   const [, setStealOwnSlot] = useState<number | null>(null);
@@ -29,41 +24,17 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
   const isHumanTurn = currentPlayer.type === 'HUMAN';
 
   const phaseInstructions: Record<ActionPhase, string> = {
-    IDLE: 'Draw a tile to begin your turn',
-    TILE_DRAWN: 'Place on your shelf or discard',
-    SWITCH_SELECT_OWN: 'Pick a tile from YOUR shelf to swap',
-    SWITCH_SELECT_TARGET: "Pick a tile from an OPPONENT's shelf",
-    STEAL_SELECT_TARGET: "Pick a tile from any opponent's shelf to steal",
-    PUSH_SELECT_TARGET: "Push a tile from a neighbour's shelf",
-    PUSH_RESOLVE: 'You were pushed! Use your drawn tile to fill the gap',
+    IDLE: 'שלוף אריח מהקופה או מההשלכות',
+    TILE_DRAWN: 'הנח במדף שלך או זרוק להשלכות',
+    SWITCH_SELECT_OWN: 'בחר אריח מהמדף שלך להחלפה',
+    SWITCH_SELECT_TARGET: 'בחר אריח מתוך מדף של יריב',
+    STEAL_SELECT_TARGET: 'בחר אריח ממדף יריב לגניבה',
+    PUSH_SELECT_TARGET: 'בחר אריח ממדף שכן לדחיפה',
+    PUSH_RESOLVE: 'נסחפת! השתמש באריח שנשלף כדי למלא את המשבצת',
   };
 
   return (
-    <div className="flex flex-col items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/10">
-      {/* View switching tabs */}
-      <div className="flex items-center gap-2 bg-black/40 p-1 rounded-xl w-full max-w-xs justify-center">
-        <button
-          onClick={() => setActiveTab('shelf')}
-          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
-            activeTab === 'shelf'
-              ? 'bg-yellow-400 text-slate-900 shadow'
-              : 'text-white/60 hover:text-white'
-          }`}
-        >
-          🛒 Shelf View
-        </button>
-        <button
-          onClick={() => setActiveTab('mission')}
-          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
-            activeTab === 'mission'
-              ? 'bg-yellow-400 text-slate-900 shadow'
-              : 'text-white/60 hover:text-white'
-          }`}
-        >
-          🔍 Mission View
-        </button>
-      </div>
-
+    <div className="flex flex-col items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/10 w-full">
       <AnimatePresence mode="wait">
         <motion.div
           key={actionPhase}
@@ -75,14 +46,14 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
             ${actionPhase === 'IDLE' ? 'bg-white/10 text-white/60' : 'bg-yellow-500/20 text-yellow-300'}
           `}
         >
-          {isHumanTurn ? phaseInstructions[actionPhase] : '🤖 AI is thinking…'}
+          {isHumanTurn ? phaseInstructions[actionPhase] : '🤖 ה-AI חושב…'}
         </motion.div>
       </AnimatePresence>
 
-      <div className="flex items-start gap-6">
+      <div className="flex items-center justify-center gap-6">
         {drawnTile && (
           <div className="flex flex-col items-center gap-1">
-            <span className="text-white/50 text-xs">Drawn</span>
+            <span className="text-white/50 text-xs">אריח שנשלף</span>
             <AnimatePresence>
               <motion.div
                 key={drawnTile.id}
@@ -99,38 +70,38 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
         )}
 
         {isHumanTurn && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 items-center">
             {actionPhase === 'TILE_DRAWN' && drawnTile && (
               <>
                 <button
                   onClick={discardTile}
-                  className="px-4 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-300 rounded-xl border border-red-500/30 text-sm font-semibold transition-all"
+                  className="px-4 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-300 rounded-xl border border-red-500/30 text-sm font-semibold transition-all shadow"
                 >
-                  🗑 Discard
+                  🗑 לזרוק להשלכות
                 </button>
-                <p className="text-white/40 text-xs text-center">or click a shelf slot to place</p>
+                <p className="text-white/40 text-xs text-center">או לחץ על משבצת במדף להנחה</p>
               </>
             )}
 
             {actionPhase === 'PUSH_RESOLVE' && (
               <p className="text-orange-300 text-xs font-semibold text-center">
-                Click the 🔴 slot on your shelf to fill it
+                לחץ על המשבצת ה-🔴 במדף שלך להנחת האריח
               </p>
             )}
 
             {actionPhase === 'SWITCH_SELECT_OWN' && (
-              <p className="text-blue-300 text-xs text-center">Click one of YOUR tiles</p>
+              <p className="text-blue-300 text-xs text-center">לחץ על אחד האריחים במדף שלך</p>
             )}
 
             {actionPhase === 'SWITCH_SELECT_TARGET' && selectedOwnSlot !== null && (
               <>
-                <p className="text-blue-300 text-xs text-center">Now click an opponent's tile</p>
+                <p className="text-blue-300 text-xs text-center">כעת לחץ על אריח במדף היריב</p>
                 {selectedTargetPlayerId && selectedTargetSlot !== null && (
                   <button
                     onClick={confirmSwitch}
-                    className="px-4 py-2 bg-blue-500/30 hover:bg-blue-500/50 text-blue-200 rounded-xl border border-blue-500/40 text-sm font-semibold transition-all"
+                    className="px-4 py-2 bg-blue-500/30 hover:bg-blue-500/50 text-blue-200 rounded-xl border border-blue-500/40 text-sm font-semibold transition-all shadow"
                   >
-                    ↔ Confirm Switch
+                    ↔ אישור החלפה
                   </button>
                 )}
               </>
@@ -138,10 +109,10 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
 
             {actionPhase === 'STEAL_SELECT_TARGET' && (
               <>
-                <p className="text-yellow-300 text-xs text-center">Click the tile to steal</p>
+                <p className="text-yellow-300 text-xs text-center">לחץ על אריח היריב לגניבה</p>
                 {selectedTargetPlayerId && selectedTargetSlot !== null && (
-                  <div className="flex flex-col gap-1">
-                    <p className="text-yellow-300 text-xs text-center">Now choose YOUR slot to replace:</p>
+                  <div className="flex flex-col gap-1 items-center">
+                    <p className="text-yellow-300 text-xs text-center">בחר את המשבצת שלך להחלפה:</p>
                     <div className="grid grid-cols-4 gap-1">
                       {currentPlayer.shelf.map((_, i) => (
                         <button
@@ -150,7 +121,7 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
                             setStealOwnSlot(i);
                             confirmSteal(i);
                           }}
-                          className="w-8 h-8 bg-white/10 hover:bg-yellow-400/30 rounded text-xs text-white/70 border border-white/20"
+                          className="w-8 h-8 bg-white/10 hover:bg-yellow-400/30 rounded text-xs text-white/70 border border-white/20 font-bold"
                         >
                           {i + 1}
                         </button>
@@ -163,42 +134,20 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
 
             {actionPhase === 'PUSH_SELECT_TARGET' && (
               <>
-                <p className="text-orange-300 text-xs text-center">Click a neighbour's tile to push</p>
+                <p className="text-orange-300 text-xs text-center">לחץ על אריח השכן לדחיפה</p>
                 {selectedTargetPlayerId && selectedTargetSlot !== null && (
                   <button
                     onClick={confirmPush}
-                    className="px-4 py-2 bg-orange-500/30 hover:bg-orange-500/50 text-orange-200 rounded-xl border border-orange-500/40 text-sm font-semibold transition-all"
+                    className="px-4 py-2 bg-orange-500/30 hover:bg-orange-500/50 text-orange-200 rounded-xl border border-orange-500/40 text-sm font-semibold transition-all shadow"
                   >
-                    👊 Confirm Push
+                    👊 אישור דחיפה
                   </button>
                 )}
               </>
             )}
           </div>
         )}
-
-        {currentPlayer.mission && (
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-white/50 text-xs flex items-center gap-1">
-              Your Mission <span className="text-yellow-300">🔍</span>
-            </span>
-            <MissionCardComponent
-              mission={currentPlayer.mission}
-              revealed={currentPlayer.type === 'HUMAN'}
-              compact
-              onClick={() => toggleMissionModal(true)}
-            />
-          </div>
-        )}
       </div>
-
-      {/* Mission Card Modal */}
-      {isMissionModalOpen && currentPlayer.mission && (
-        <MissionCardModal
-          mission={currentPlayer.mission}
-          onClose={() => toggleMissionModal(false)}
-        />
-      )}
     </div>
   );
 };

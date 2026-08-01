@@ -7,8 +7,6 @@ interface GameStore {
   state: GameState | null;
   settings: GameSettings;
   isAIThinking: boolean;
-  activeTab: 'shelf' | 'mission';
-  isMissionModalOpen: boolean;
   updateSettings: (s: Partial<GameSettings>) => void;
   startGame: () => void;
   drawPool: () => void;
@@ -23,8 +21,6 @@ interface GameStore {
   confirmPush: () => void;
   continueAfterRound: () => void;
   resetGame: () => void;
-  setActiveTab: (tab: 'shelf' | 'mission') => void;
-  toggleMissionModal: (open?: boolean) => void;
   setTelegramUser: (user: GameState['telegramUser']) => void;
 }
 
@@ -35,14 +31,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
   state: null,
   settings: DEFAULT,
   isAIThinking: false,
-  activeTab: 'shelf',
-  isMissionModalOpen: false,
 
   updateSettings: (s) => set(st => ({ settings: { ...st.settings, ...s } })),
 
   startGame: () => {
     const s = setupGame(get().settings);
-    set({ state: s, activeTab: 'shelf', isMissionModalOpen: false });
+    set({ state: s });
     scheduleAI(s, set, get);
   },
 
@@ -125,15 +119,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { state } = get();
     if (!state) return;
     const s = startNextRound(state);
-    set({ state: s, isMissionModalOpen: false });
+    set({ state: s });
     scheduleAI(s, set, get);
   },
 
-  resetGame: () => set({ state: null, isMissionModalOpen: false }),
-
-  setActiveTab: (tab) => set({ activeTab: tab }),
-
-  toggleMissionModal: (open) => set(st => ({ isMissionModalOpen: open ?? !st.isMissionModalOpen })),
+  resetGame: () => set({ state: null }),
 
   setTelegramUser: (user) => set(st => ({ state: st.state ? { ...st.state, telegramUser: user } : null })),
 }));

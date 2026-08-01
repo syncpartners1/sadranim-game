@@ -20,7 +20,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
     placeOnShelf,
     selectOwnSlot,
     selectTargetSlot,
-    toggleMissionModal,
   } = useGameStore();
 
   const [selectedMobileOpponentIdx, setSelectedMobileOpponentIdx] = useState<number>(0);
@@ -66,7 +65,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
   const activeMobileOpponent = opponents[selectedMobileOpponentIdx] ?? opponents[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col p-2 gap-3 overflow-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col p-2 gap-3 overflow-auto" dir="rtl">
       {/* ── TOP: OPPONENT SHELVES ───────────────────────────────── */}
 
       {/* MOBILE (< 768px): Tabbed navigation for opponents */}
@@ -92,7 +91,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
               >
                 {opp.type === 'AI' ? '🤖 ' : '👤 '}
                 <span>{opp.name}</span>
-                {isCurrent && <span className="text-[9px] bg-black/40 text-yellow-300 px-1 rounded">TURN</span>}
+                {isCurrent && <span className="text-[9px] bg-black/40 text-yellow-300 px-1 rounded">תורו</span>}
               </button>
             );
           })}
@@ -130,7 +129,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
                       animate={{ opacity: [0.5, 1, 0.5] }}
                       transition={{ duration: 0.8, repeat: Infinity }}
                     >
-                      🤖 Thinking…
+                      🤖 ה-AI חושב…
                     </motion.div>
                   )}
                 </motion.div>
@@ -171,7 +170,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ duration: 0.8, repeat: Infinity }}
                 >
-                  🤖 Thinking…
+                  🤖 ה-AI חושב…
                 </motion.div>
               )}
             </motion.div>
@@ -199,7 +198,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
         </div>
 
         <div className="flex items-center justify-center gap-4 flex-wrap max-w-2xl w-full">
-          {/* Player Shelf Board (Left) */}
+          {/* Player Shelf Board (Right in RTL) */}
           <motion.div
             animate={state.currentTurnIndex === humanIdx
               ? { boxShadow: ['0 0 0px #fde047', '0 0 20px #fde047', '0 0 0px #fde047'] }
@@ -222,32 +221,30 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
             />
           </motion.div>
 
-          {/* Secret Mission Card (Right) — Fixed & Side by side */}
+          {/* Secret Mission Card (Left in RTL) — Fixed & Side by side */}
           {human.mission && (
             <div className="flex flex-col items-center gap-2 p-3 bg-white/5 border border-white/10 rounded-2xl">
               <div className="flex items-center gap-1">
-                <span className="text-yellow-300 font-bold text-xs">🎯 Target Mission</span>
-                <span className="text-white/40 text-[10px]">(Fixed)</span>
+                <span className="text-yellow-300 font-bold text-xs">🎯 כרטיס המשימה שלך</span>
               </div>
               <MissionCardComponent
                 mission={human.mission}
                 revealed={true}
                 compact={false}
-                onClick={() => toggleMissionModal(true)}
               />
               <span className="text-[10px] text-white/50 text-center">
-                Click to expand
+                קבוע עד לסיום הסבב
               </span>
             </div>
           )}
         </div>
 
         <div className="flex items-center gap-3 text-white/50 text-xs">
-          <span>Round {state.roundNumber}</span>
+          <span>סבב {state.roundNumber}</span>
           <span>•</span>
-          <span>{state.drawPool.length} tiles left</span>
+          <span>{state.drawPool.length} אריחים בקופה</span>
           <span>•</span>
-          <span>{state.missionsPool.length} missions left</span>
+          <span>{state.missionsPool.length} משימות נותרו</span>
         </div>
       </div>
     </div>
