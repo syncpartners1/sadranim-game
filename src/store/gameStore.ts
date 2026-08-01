@@ -29,7 +29,7 @@ interface GameStore {
 }
 
 const DEFAULT: GameSettings = { playerCount: 2, humanCount: 1, aiLevel: 'MEDIUM', useTelegramNames: false };
-const AI_DELAY = 900;
+const AI_DELAY = 700; // Fast AI response (< 1 second)
 const AFK_TIMEOUT_MS = 300 * 1000;
 
 let unsubscribeRoom: (() => void) | null = null;
@@ -202,19 +202,19 @@ function isAI(state: GameState) {
 function scheduleAI(state: GameState, set: any, get: any) {
   if (state.gameStatus !== 'PLAYING' || !isAI(state)) return;
   set(() => ({ isAIThinking: true }));
+
   setTimeout(() => {
     const cur = get().state;
-    if (!cur || cur.gameStatus !== 'PLAYING') { set(() => ({ isAIThinking: false })); return; }
-    const afterDraw = drawFromPool(cur);
-    set(() => ({ state: afterDraw }));
-    saveRoomStateToFirestore(afterDraw);
-    setTimeout(() => {
-      const cur2 = get().state;
-      if (!cur2) return;
-      const afterAct = aiTakeTurn(cur2);
-      set(() => ({ state: afterAct, isAIThinking: false }));
-      saveRoomStateToFirestore(afterAct);
+    if (!cur || cur.gameStatus !== 'PLAYING' || !isAI(cur)) {
+      set(() => ({ isAIThinking: false }));
+      return;
+    }
+    const afterAct = aiTakeTurn(cur);
+    set(() => ({ state: afterAct, isAIThinking: false }));
+    saveRoomStateToFirestore(afterAct);
+
+    if (afterAct.gameStatus === 'PLAYING' && isAI(afterAct)) {
       scheduleAI(afterAct, set, get);
-    }, AI_DELAY / 2);
+    }
   }, AI_DELAY);
 }

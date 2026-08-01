@@ -30,6 +30,7 @@ export interface MissionCard {
   pattern: ProductId[]; // exactly 8 slots, left-to-right
 }
 
+export type AIPersonality = 'BUILDER' | 'DISRUPTOR' | 'ADAPTIVE';
 export type AILevel = 'EASY' | 'MEDIUM' | 'HARD';
 export type PlayerType = 'HUMAN' | 'AI';
 
@@ -38,6 +39,7 @@ export interface Player {
   name: string;
   type: PlayerType;
   aiLevel?: AILevel;
+  aiPersonality?: AIPersonality;
   avatarUrl?: string;    // Telegram user avatar or placeholder
   isHost?: boolean;
   isReady?: boolean;
@@ -76,13 +78,10 @@ export interface GameState {
   drawnFromDiscard?: boolean;    // true when tile was drawn from neighbour's discard
   actionPhase: ActionPhase;
   turnStartTimestamp: number;
-  // For switch/push — which slots are selected
   selectedOwnSlot: number | null;
   selectedTargetPlayerId: string | null;
   selectedTargetSlot: number | null;
-  // Animation events
   lastAction: string | null;
-  // Telegram user info
   telegramUser?: { id: number; first_name: string; username?: string; photo_url?: string };
 }
 

@@ -2,6 +2,7 @@ import type { GameState, Player, Tile, GameSettings, ActionPhase } from '../type
 import { createTilePool, MISSION_CARDS, PUSH_PLACEHOLDER } from '../data/tiles';
 import { checkWin, getPreviousPlayerIndex } from './validators';
 import { generateRoomCode } from '../services/roomSync';
+import { BOT_PROFILES } from './aiPlayer';
 
 export function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -22,21 +23,27 @@ export function setupGame(settings: GameSettings): GameState {
   const missionsPool = shuffle([...MISSION_CARDS]);
   const roomCode = existingRoomCode || generateRoomCode();
 
-  const players: Player[] = Array.from({ length: playerCount }, (_, i) => ({
-    id: `player-${i}`,
-    name: i < humanCount ? (i === 0 ? 'You' : `Player ${i + 1}`) : `Bot ${i - humanCount + 1}`,
-    type: (i < humanCount ? 'HUMAN' : 'AI') as Player['type'],
-    aiLevel: i < humanCount ? undefined : aiLevel,
-    isHost: i === 0,
-    isReady: true,
-    lastActiveTimestamp: Date.now(),
-    shelf: Array(8).fill(null) as (Tile | null)[],
-    mission: null,
-    discardPile: [],
-    score: 0,
-    hasPushPlaceholder: false,
-    pushSlotIndex: null,
-  }));
+  const players: Player[] = Array.from({ length: playerCount }, (_, i) => {
+    const isHuman = i < humanCount;
+    const botProfile = BOT_PROFILES[(i - humanCount) % BOT_PROFILES.length];
+
+    return {
+      id: `player-${i}`,
+      name: isHuman ? (i === 0 ? 'You' : `Player ${i + 1}`) : (botProfile?.name || `Bot ${i - humanCount + 1}`),
+      type: (isHuman ? 'HUMAN' : 'AI') as Player['type'],
+      aiLevel: isHuman ? undefined : aiLevel,
+      aiPersonality: isHuman ? undefined : (botProfile?.personality || 'BUILDER'),
+      isHost: i === 0,
+      isReady: true,
+      lastActiveTimestamp: Date.now(),
+      shelf: Array(8).fill(null) as (Tile | null)[],
+      mission: null,
+      discardPile: [],
+      score: 0,
+      hasPushPlaceholder: false,
+      pushSlotIndex: null,
+    };
+  });
 
   for (const player of players) {
     const shelf: (Tile | null)[] = [];
@@ -87,6 +94,7 @@ export function convertHumanToAI(state: GameState, playerId: string): GameState 
         name: `${p.name} (Bot)`,
         type: 'AI' as const,
         aiLevel: 'MEDIUM' as const,
+        aiPersonality: 'ADAPTIVE' as const,
       };
     }
     return p;
@@ -139,16 +147,10 @@ export function drawFromPool(state: GameState): GameState {
   });
 }
 
-/**
- * Draw tile from the EXACT previous neighbour (neighbour 1).
- * Drawing from any other player is strictly forbidden.
- * The drawn tile MUST be placed onto player's shelf board (drawnFromDiscard: true).
- */
 export function drawFromNeighbourDiscard(state: GameState): GameState {
   const players = state.players.map(p => ({ ...p, discardPile: [...p.discardPile] }));
   const prevIdx = getPreviousPlayerIndex(state);
   
-  // Can only draw from the exact previous neighbour's discard pile
   if (players[prevIdx].discardPile.length === 0) return state;
 
   const rawTile = players[prevIdx].discardPile.shift()!;
