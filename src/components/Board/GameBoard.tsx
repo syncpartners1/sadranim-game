@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { QRCodeSVG } from 'qrcode.react';
 import type { GameState } from '../../types/game';
 import { Shelf } from '../Shelf/Shelf';
 import { DrawPool } from '../DrawPool/DrawPool';
@@ -8,6 +9,7 @@ import { MissionCardComponent } from '../MissionCard/MissionCard';
 import { RulesModal } from '../RulesModal/RulesModal';
 import { useGameStore } from '../../store/gameStore';
 import { canDrawFromNeighbourDiscard, getAdjacentPlayerIndices } from '../../engine/validators.ts';
+import { getShareableUrl } from '../../services/roomSync';
 
 interface GameBoardProps {
   state: GameState;
@@ -28,6 +30,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
   const [selectedMobileOpponentIdx, setSelectedMobileOpponentIdx] = useState<number>(0);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [isRulesOpen, setIsRulesOpen] = useState<boolean>(false);
+  const [isQROpen, setIsQROpen] = useState<boolean>(false);
 
   const human = state.players.find(p => p.wasHuman || p.id === 'player-0') ?? state.players[0];
   const humanIdx = state.players.indexOf(human);
@@ -36,6 +39,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
   const currentPlayer = state.players[state.currentTurnIndex];
   const isHumanTurn = currentPlayer.id === human.id && !isHumanBotControlled;
   const { actionPhase, selectedTargetPlayerId, selectedOwnSlot, selectedTargetSlot, turnStartTimestamp } = state;
+
+  const shareUrl = getShareableUrl(state.roomCode);
 
   useEffect(() => {
     if (state.gameStatus !== 'PLAYING') return;
@@ -143,15 +148,27 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
           </button>
         )}
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsRulesOpen(true);
-          }}
-          className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg text-xs font-bold border border-blue-500/30 transition-all flex items-center gap-1"
-        >
-          <span>📖</span> איך משחקים?
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsQROpen(true);
+            }}
+            className="px-3 py-1 bg-yellow-400/20 hover:bg-yellow-400/30 text-yellow-300 rounded-lg text-xs font-bold border border-yellow-400/30 transition-all flex items-center gap-1"
+          >
+            <span>📱</span> קוד QR
+          </button>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsRulesOpen(true);
+            }}
+            className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg text-xs font-bold border border-blue-500/30 transition-all flex items-center gap-1"
+          >
+            <span>📖</span> איך משחקים?
+          </button>
+        </div>
       </div>
 
       {/* ── 1. TOP SECTION: OPPONENT SHELVES ────────────────────── */}
@@ -353,6 +370,41 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
 
       {/* Rules Modal */}
       <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
+
+      {/* QR Code Modal */}
+      <AnimatePresence>
+        {isQROpen && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => setIsQROpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-slate-900 border border-white/20 rounded-3xl p-6 flex flex-col items-center gap-4 max-w-sm w-full text-center shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between w-full border-b border-white/10 pb-2">
+                <span className="text-yellow-400 font-black text-sm">📱 סרוק קוד QR להצטרפות</span>
+                <button onClick={() => setIsQROpen(false)} className="text-white/60 hover:text-white font-bold text-sm">✕</button>
+              </div>
+              <div className="bg-white p-3 rounded-2xl border-4 border-yellow-400 shadow-xl">
+                <QRCodeSVG value={shareUrl} size={180} bgColor="#ffffff" fgColor="#0f172a" level="M" />
+              </div>
+              <p className="text-white/70 text-xs leading-relaxed">
+                סריקה במצלמת המכשיר הנייד תפתח את המשחק ישירות בחדר <strong>{state.roomCode}</strong> ותאפשר התקנה כאפליקציה (PWA)!
+              </p>
+              <button
+                onClick={() => setIsQROpen(false)}
+                className="w-full py-2.5 bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-xs rounded-xl shadow"
+              >
+                סגור
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

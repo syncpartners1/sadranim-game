@@ -14,7 +14,6 @@ export const Lobby: React.FC = () => {
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [isRulesOpen, setIsRulesOpen] = useState(false);
-  const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -75,7 +74,7 @@ export const Lobby: React.FC = () => {
           <span>📖</span> לחץ כאן לקריאת הוראות המשחק (איך משחקים?)
         </button>
 
-        {/* ── ROOM INVITATION & SHARE & QR ENGINE ── */}
+        {/* ── ROOM INVITATION & SHARE ENGINE ── */}
         <div className="bg-black/40 rounded-2xl p-4 border border-white/10 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <span className="text-white/70 text-xs font-bold">קוד חדר משחק:</span>
@@ -86,12 +85,12 @@ export const Lobby: React.FC = () => {
 
           <div className="text-xs text-white/50 font-medium">שתף והזמן שחקנים אנושיים לחדר:</div>
 
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="py-2 px-1 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow transition-all"
+              className="py-2 px-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow transition-all"
             >
               <span>💬</span> WhatsApp
             </a>
@@ -100,51 +99,37 @@ export const Lobby: React.FC = () => {
               href={telegramUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="py-2 px-1 bg-blue-500 hover:bg-blue-400 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow transition-all"
+              className="py-2 px-2 bg-blue-500 hover:bg-blue-400 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow transition-all"
             >
               <span>✈️</span> Telegram
             </a>
 
             <button
               onClick={handleCopyLink}
-              className="py-2 px-1 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 border border-white/20 transition-all"
+              className="py-2 px-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 border border-white/20 transition-all"
             >
-              <span>🔗</span> {copied ? 'הועתק!' : 'העתק'}
-            </button>
-
-            <button
-              onClick={() => setShowQR(!showQR)}
-              className="py-2 px-1 bg-yellow-400/20 hover:bg-yellow-400/30 text-yellow-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1 border border-yellow-400/30 transition-all"
-            >
-              <span>📱</span> {showQR ? 'סגור QR' : 'קוד QR'}
+              <span>🔗</span> {copied ? 'הועתק!' : 'העתק קישור'}
             </button>
           </div>
 
-          {/* ── EXPANDABLE MOBILE JOIN & INSTALL QR CODE ── */}
-          {showQR && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="bg-white/10 p-4 rounded-xl border border-white/20 flex flex-col items-center gap-3 mt-1"
-            >
-              <span className="text-yellow-300 font-bold text-xs text-center">
-                📱 סרוק במצלמת הנייד להצטרפות / התקנת המשחק
-              </span>
-              <div className="bg-white p-3 rounded-2xl shadow-xl border-4 border-yellow-400">
-                <QRCodeSVG
-                  value={shareUrl}
-                  size={150}
-                  bgColor="#ffffff"
-                  fgColor="#0f172a"
-                  level="M"
-                />
-              </div>
-              <p className="text-white/60 text-[11px] text-center leading-relaxed">
-                סריקת הקוד במכשיר נייד תפתח את המשחק בחדר <strong>{roomCode}</strong> ותאפשר התקנה כאפליקציה (PWA)!
-              </p>
-            </motion.div>
-          )}
+          {/* ── PERMANENTLY VISIBLE MOBILE JOIN & INSTALL QR CODE ── */}
+          <div className="bg-white/10 p-4 rounded-xl border border-white/20 flex flex-col items-center gap-2 mt-1">
+            <span className="text-yellow-300 font-bold text-xs text-center flex items-center gap-1">
+              <span>📱</span> סרוק במצלת הנייד להצטרפות / התקנה
+            </span>
+            <div className="bg-white p-2.5 rounded-2xl shadow-xl border-4 border-yellow-400">
+              <QRCodeSVG
+                value={shareUrl}
+                size={140}
+                bgColor="#ffffff"
+                fgColor="#0f172a"
+                level="M"
+              />
+            </div>
+            <p className="text-white/60 text-[10px] text-center leading-relaxed">
+              סריקה בנייד תפתח את המשחק בחדר <strong>{roomCode}</strong> ותאפשר התקנה כאפליקציה (PWA)!
+            </p>
+          </div>
         </div>
 
         {/* ── JOIN EXISTING ROOM MANUALLY ── */}
