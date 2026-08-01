@@ -66,6 +66,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col p-2 gap-3 overflow-auto" dir="rtl">
+
       {/* ── TOP: OPPONENT SHELVES ───────────────────────────────── */}
 
       {/* MOBILE (< 768px): Tabbed navigation for opponents */}
@@ -178,9 +179,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
         })}
       </div>
 
-      {/* ── MIDDLE: Draw Pool ──────────────────────────────────── */}
-      <div className="flex justify-center">
-        <div className="bg-black/30 rounded-2xl p-4 border border-white/10">
+      {/* ── CENTER: Draw Pool & Discard & Mission Stack Row ────────────── */}
+      <div className="flex justify-center my-1">
+        <div className="bg-black/30 rounded-2xl p-3 border border-white/10">
           <DrawPool
             state={state}
             onDrawPool={doDrawPool}
@@ -198,7 +199,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
         </div>
 
         <div className="flex items-center justify-center gap-4 flex-wrap max-w-2xl w-full">
-          {/* Player Shelf Board (Right in RTL) */}
+          {/* Player Shelf Board */}
           <motion.div
             animate={state.currentTurnIndex === humanIdx
               ? { boxShadow: ['0 0 0px #fde047', '0 0 20px #fde047', '0 0 0px #fde047'] }
@@ -221,20 +222,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
             />
           </motion.div>
 
-          {/* Secret Mission Card (Left in RTL) — Fixed & Side by side */}
+          {/* Secret Mission Card — Side by Side */}
           {human.mission && (
             <div className="flex flex-col items-center gap-2 p-3 bg-white/5 border border-white/10 rounded-2xl">
-              <div className="flex items-center gap-1">
-                <span className="text-yellow-300 font-bold text-xs">🎯 כרטיס המשימה שלך</span>
-              </div>
+              <span className="text-yellow-300 font-bold text-xs">🎯 כרטיס המשימה שלך</span>
               <MissionCardComponent
                 mission={human.mission}
                 revealed={true}
                 compact={false}
               />
-              <span className="text-[10px] text-white/50 text-center">
-                קבוע עד לסיום הסבב
-              </span>
             </div>
           )}
         </div>
