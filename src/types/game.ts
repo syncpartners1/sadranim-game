@@ -38,6 +38,7 @@ export interface Player {
   id: string;
   name: string;
   type: PlayerType;
+  wasHuman?: boolean;    // true if this player started as Human (or is Human)
   aiLevel?: AILevel;
   aiPersonality?: AIPersonality;
   avatarUrl?: string;    // Telegram user avatar or placeholder
@@ -52,30 +53,29 @@ export interface Player {
   pushSlotIndex: number | null; // which slot has the Push placeholder
 }
 
-// Tracks what interactive action is pending
 export type ActionPhase =
-  | 'IDLE'              // no tile in hand yet
-  | 'TILE_DRAWN'        // normal tile drawn, waiting for place/discard decision
-  | 'SWITCH_SELECT_OWN' // SWITCH drawn: pick your tile to swap
-  | 'SWITCH_SELECT_TARGET' // pick opponent + their tile
-  | 'PUSH_SELECT_TARGET'   // PUSH drawn: pick adjacent opponent's tile to push
-  | 'PUSH_RESOLVE'         // this player must replace the PUSH placeholder on their shelf
+  | 'IDLE'
+  | 'TILE_DRAWN'
+  | 'SWITCH_SELECT_OWN'
+  | 'SWITCH_SELECT_TARGET'
+  | 'PUSH_SELECT_TARGET'
+  | 'PUSH_RESOLVE';
 
 export interface GameState {
   gameId: string;
-  roomCode: string;             // 5-character invite code
+  roomCode: string;
   players: Player[];
   currentTurnIndex: number;
   drawPool: Tile[];
-  allDiscarded: Tile[];         // merged when pool runs out
-  missionsPool: MissionCard[];  // remaining undealt missions
-  usedMissions: MissionCard[];  // missions already completed
+  allDiscarded: Tile[];
+  missionsPool: MissionCard[];
+  usedMissions: MissionCard[];
   gameStatus: 'LOBBY' | 'WAITING_FOR_READIES' | 'PLAYING' | 'ROUND_OVER' | 'GAME_OVER';
   roundNumber: number;
-  winnerId: string | null;       // round winner
-  overallWinnerId: string | null; // game winner
-  drawnTile: Tile | null;        // tile currently in hand
-  drawnFromDiscard?: boolean;    // true when tile was drawn from neighbour's discard
+  winnerId: string | null;
+  overallWinnerId: string | null;
+  drawnTile: Tile | null;
+  drawnFromDiscard?: boolean;
   actionPhase: ActionPhase;
   turnStartTimestamp: number;
   selectedOwnSlot: number | null;

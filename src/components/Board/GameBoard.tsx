@@ -29,14 +29,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [isRulesOpen, setIsRulesOpen] = useState<boolean>(false);
 
-  const currentPlayer = state.players[state.currentTurnIndex];
-  const isHumanTurn = currentPlayer.type === 'HUMAN';
-  const { actionPhase, selectedTargetPlayerId, turnStartTimestamp } = state;
-
-  // Find human player slot
-  const human = state.players.find(p => p.type === 'HUMAN') ?? state.players[0];
+  // Reliably identify the human player slot (even when temporarily converted to AI bot)
+  const human = state.players.find(p => p.wasHuman || p.id === 'player-0') ?? state.players[0];
   const humanIdx = state.players.indexOf(human);
-  const isHumanBotControlled = human.name.includes('(Bot)');
+  const isHumanBotControlled = human.type === 'AI' || human.name.includes('(Bot)');
+
+  const currentPlayer = state.players[state.currentTurnIndex];
+  const isHumanTurn = currentPlayer.id === human.id && !isHumanBotControlled;
+  const { actionPhase, selectedTargetPlayerId, turnStartTimestamp } = state;
 
   useEffect(() => {
     if (state.gameStatus !== 'PLAYING') return;
@@ -66,10 +66,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
     return false;
   }
 
-  function handleShelfSlotClick(playerIndex: number, slotIndex: number) {
+  function handleInteraction() {
     if (isHumanBotControlled) {
       reclaimHumanPlayer(human.id);
     }
+  }
+
+  function handleShelfSlotClick(playerIndex: number, slotIndex: number) {
+    handleInteraction();
     const player = state.players[playerIndex];
     if (playerIndex === state.currentTurnIndex) {
       if (canPlace) {
@@ -92,29 +96,59 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
   const afkSecs = remainingAFKSeconds % 60;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col p-3 gap-4 overflow-auto" dir="rtl">
+    <div
+      className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col p-3 gap-4 overflow-auto relative"
+      dir="rtl"
+      onClick={handleInteraction}
+    >
 
-      {/* Top Navbar with Rules & Reclaim Button */}
+      {/* 🤖 PROMINENT BOT CONTROLLED BANNER (when human player is converted to bot) */}
+      {isHumanBotControlled && (
+        <motion.div
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="sticky top-0 z-50 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 text-white p-3 rounded-2xl shadow-2xl border-2 border-yellow-300 flex items-center justify-between flex-wrap gap-2 text-center"
+        >
+          <div className="flex items-center gap-2 text-sm font-black">
+            <span className="text-xl animate-spin">🤖</span>
+            <span>המשחק מנוהל כרגע ע"י בוט אוטומטי עקב חוסר פעילות!</span>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              reclaimHumanPlayer(human.id);
+            }}
+            className="px-5 py-2 bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-sm rounded-xl shadow-lg animate-bounce transition-all border border-yellow-200"
+          >
+            👋 חזרתי! לחץ כאן לבטל את הבוט ולחזור לשחק 🚀
+          </button>
+        </motion.div>
+      )}
+
+      {/* Top Navbar */}
       <div className="flex items-center justify-between px-2 py-1 bg-black/40 rounded-xl border border-white/10 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <img src="/assets/Logo.png" alt="הסדרנים" className="h-7 rounded" />
           <span className="text-yellow-400 font-black text-sm">הסדרנים</span>
         </div>
 
-        {/* If player was converted to bot, show a Reclaim button */}
         {isHumanBotControlled && (
-          <motion.button
-            onClick={() => reclaimHumanPlayer(human.id)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              reclaimHumanPlayer(human.id);
+            }}
             className="px-3 py-1 bg-green-500 hover:bg-green-400 text-slate-950 rounded-lg text-xs font-black shadow-lg animate-pulse"
           >
-            👋 חזרתי! בטל את הבוט וקח שליטה בחזרה
-          </motion.button>
+            👋 חזרתי לשחק
+          </button>
         )}
 
         <button
-          onClick={() => setIsRulesOpen(true)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsRulesOpen(true);
+          }}
           className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg text-xs font-bold border border-blue-500/30 transition-all flex items-center gap-1"
         >
           <span>📖</span> איך משחקים?
@@ -135,7 +169,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
             return (
               <button
                 key={opp.id}
-                onClick={() => setSelectedMobileOpponentIdx(idx)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedMobileOpponentIdx(idx);
+                }}
                 className={`
                   px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1
                   ${isSelected
@@ -221,17 +258,17 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
           <DrawPool
             state={state}
             onDrawPool={() => {
-              if (isHumanBotControlled) reclaimHumanPlayer(human.id);
+              handleInteraction();
               doDrawPool();
             }}
             onDrawDiscard={() => {
-              if (isHumanBotControlled) reclaimHumanPlayer(human.id);
+              handleInteraction();
               drawNeighbourDiscard();
             }}
             canDrawDiscard={canDrawFromNeighbourDiscard(state)}
             disabled={!canDraw}
           />
-          {isHumanTurn && (
+          {!isHumanBotControlled && (
             <span className="text-[10px] text-white/40 font-mono">
               ⏱ זמן תור נותר: {afkMinutes}:{afkSecs < 10 ? `0${afkSecs}` : afkSecs} (מעבר ל-AI ב-5 דקות)
             </span>
@@ -249,11 +286,17 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
           {/* Your Shelf Board */}
           <div className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-2">
-              <span className="text-yellow-300 font-bold text-xs">🛒 המדף שלך</span>
+              <span className="text-yellow-300 font-bold text-xs">🛒 המדף שלך ({human.name})</span>
               {isHumanBotControlled && (
-                <span className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded-full font-semibold animate-pulse">
-                  🤖 בוט פועל כרגע בשמך
-                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    reclaimHumanPlayer(human.id);
+                  }}
+                  className="text-[10px] bg-red-500 hover:bg-red-400 text-white font-bold border border-red-300 px-2.5 py-0.5 rounded-full shadow animate-pulse cursor-pointer"
+                >
+                  🤖 בוט פועל — [ לחץ כאן לחזור לשחק ]
+                </button>
               )}
             </div>
             <div className="rounded-2xl p-1 bg-white/5 border border-white/10 shadow-xl">
@@ -261,7 +304,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
                 player={human}
                 isCurrentPlayer={state.currentTurnIndex === humanIdx}
                 actionPhase={actionPhase}
-                allowRearrange={true}
+                allowRearrange={!isHumanBotControlled}
                 onSlotClick={(slot) => handleShelfSlotClick(humanIdx, slot)}
                 highlightSlots={
                   human.hasPushPlaceholder && human.pushSlotIndex !== null

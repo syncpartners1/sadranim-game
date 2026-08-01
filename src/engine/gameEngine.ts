@@ -31,6 +31,7 @@ export function setupGame(settings: GameSettings): GameState {
       id: `player-${i}`,
       name: isHuman ? (i === 0 ? 'You' : `Player ${i + 1}`) : (botProfile?.name || `Bot ${i - humanCount + 1}`),
       type: (isHuman ? 'HUMAN' : 'AI') as Player['type'],
+      wasHuman: isHuman,
       aiLevel: isHuman ? undefined : aiLevel,
       aiPersonality: isHuman ? undefined : (botProfile?.personality || 'BUILDER'),
       isHost: i === 0,
@@ -88,11 +89,13 @@ export function setupGame(settings: GameSettings): GameState {
 
 export function convertHumanToAI(state: GameState, playerId: string): GameState {
   const players = state.players.map(p => {
-    if (p.id === playerId && p.type === 'HUMAN') {
+    if ((p.id === playerId || p.wasHuman) && p.type === 'HUMAN') {
+      const cleanName = p.name.replace(/\s*\(Bot\)/i, '');
       return {
         ...p,
-        name: `${p.name} (Bot)`,
+        name: `${cleanName} (Bot)`,
         type: 'AI' as const,
+        wasHuman: true,
         aiLevel: 'MEDIUM' as const,
         aiPersonality: 'ADAPTIVE' as const,
       };
@@ -109,12 +112,13 @@ export function convertHumanToAI(state: GameState, playerId: string): GameState 
 
 export function convertAIToHuman(state: GameState, playerId: string): GameState {
   const players = state.players.map(p => {
-    if (p.id === playerId && p.type === 'AI') {
+    if ((p.id === playerId || p.wasHuman) && p.type === 'AI') {
       const cleanName = p.name.replace(/\s*\(Bot\)/i, '');
       return {
         ...p,
         name: cleanName || 'You',
         type: 'HUMAN' as const,
+        wasHuman: true,
         aiLevel: undefined,
         aiPersonality: undefined,
         lastActiveTimestamp: Date.now(),
