@@ -26,9 +26,18 @@ jobs:
         run: npm run build
 
       - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_SADRANIM_GAME }}'
-          projectId: sadranim-game
-          channelId: live
+        env:
+          KEY_1: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SADRANIM_GAME }}
+          KEY_2: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          KEY_3: ${{ secrets.GCP_SA_KEY }}
+          KEY_4: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          SA_KEY="${KEY_1:-${KEY_2:-${KEY_3:-$KEY_4}}}"
+          if [ -z "$SA_KEY" ]; then
+            echo "::error::No Firebase secret found in GitHub Secrets. Please add FIREBASE_SERVICE_ACCOUNT_SADRANIM_GAME to Repository Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          echo "$SA_KEY" > ./sa-key-deploy.json
+          export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/sa-key-deploy.json"
+          npx firebase-tools deploy --only hosting --project sadranim-game --non-interactive
+          rm -f ./sa-key-deploy.json
