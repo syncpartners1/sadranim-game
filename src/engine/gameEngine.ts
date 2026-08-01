@@ -46,12 +46,21 @@ export function setupGame(settings: GameSettings): GameState {
     };
   });
 
+  // STRICT RULE: Maximum 1 SALE tile per shelf for any player or bot!
   for (const player of players) {
     const shelf: (Tile | null)[] = [];
+    let saleCount = 0;
     while (shelf.length < 8) {
       const tile = drawPool.pop()!;
       if (tile.type === 'PUSH' || tile.type === 'SWITCH') {
         drawPool.unshift(tile);
+      } else if (tile.type === 'SALE') {
+        if (saleCount >= 1) {
+          drawPool.unshift(tile); // Disallow 2nd SALE tile during initial deal
+        } else {
+          saleCount++;
+          shelf.push({ ...tile });
+        }
       } else {
         shelf.push({ ...tile });
       }
@@ -136,7 +145,6 @@ export function convertAIToHuman(state: GameState, playerId: string): GameState 
 }
 
 export function drawFromPool(state: GameState): GameState {
-  // SAFETY GUARD: If player already has a tile in hand, CANNOT draw another tile!
   if (state.drawnTile !== null) return state;
 
   let pool = [...state.drawPool];
@@ -182,7 +190,6 @@ export function drawFromPool(state: GameState): GameState {
 }
 
 export function drawFromNeighbourDiscard(state: GameState): GameState {
-  // SAFETY GUARD: If player already has a tile in hand, CANNOT draw another tile!
   if (state.drawnTile !== null) return state;
 
   const players = state.players.map(p => ({ ...p, discardPile: [...p.discardPile] }));
@@ -224,9 +231,11 @@ export function placeTileOnShelf(state: GameState, slotIndex: number): GameState
   const players = state.players.map(p => ({ ...p, shelf: [...p.shelf], discardPile: [...p.discardPile] }));
   const player = players[state.currentTurnIndex];
 
+  // STRICT RULE: Maximum 1 SALE tile per shelf for Human or AI Bot!
   if (state.drawnTile.type === 'SALE') {
     const existingSaleIndex = player.shelf.findIndex(t => t?.type === 'SALE');
     if (existingSaleIndex >= 0 && existingSaleIndex !== slotIndex) {
+      // Player already has a SALE tile at a different slot! Disallow 2nd SALE tile.
       return state;
     }
   }
@@ -284,7 +293,7 @@ export function swapOwnShelfSlots(state: GameState, slotA: number, slotB: number
 }
 
 export function claimWin(state: GameState, playerId: string): GameState {
-  const player = state.players.find(p => p.id === playerId);
+  const player = state.players.find(p => p.id === playerId || (p.wasHuman && state.players.find(x => x.id === playerId)?.wasHuman));
   if (!player) return state;
   if (checkWin(player, state)) {
     return endRound(state, player.id);
@@ -309,6 +318,17 @@ export function executeSwitchAction(state: GameState, ownSlot: number, targetId:
 
   const ownTile = cur.shelf[ownSlot] ? { ...cur.shelf[ownSlot]! } : null;
   const targetTile = tgt.shelf[targetSlot] ? { ...tgt.shelf[targetSlot]! } : null;
+
+  // STRICT RULE: Prevent receiving a 2nd SALE tile via SWITCH for both human & bot!
+  if (targetTile?.type === 'SALE') {
+    const curExistingSale = cur.shelf.findIndex((t, idx) => t?.type === 'SALE' && idx !== ownSlot);
+    if (curExistingSale >= 0) return state;
+  }
+
+  if (ownTile?.type === 'SALE') {
+    const tgtExistingSale = tgt.shelf.findIndex((t, idx) => t?.type === 'SALE' && idx !== targetSlot);
+    if (tgtExistingSale >= 0) return state;
+  }
 
   cur.shelf[ownSlot] = targetTile;
   tgt.shelf[targetSlot] = ownTile;
@@ -428,10 +448,18 @@ function endRound(state: GameState, winnerId: string): GameState {
   let drawPool = [...allTiles];
   for (const rp of resetPlayers) {
     const shelf: (Tile | null)[] = [];
+    let saleCount = 0;
     while (shelf.length < 8 && drawPool.length > 0) {
       const tile = drawPool.pop()!;
       if (tile.type === 'PUSH' || tile.type === 'SWITCH') {
         drawPool.unshift(tile);
+      } else if (tile.type === 'SALE') {
+        if (saleCount >= 1) {
+          drawPool.unshift(tile); // Disallow 2nd SALE tile during round reset deal
+        } else {
+          saleCount++;
+          shelf.push({ ...tile });
+        }
       } else {
         shelf.push({ ...tile });
       }
