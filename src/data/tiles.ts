@@ -24,28 +24,33 @@ function makeProductTiles(
   }));
 }
 
-export const FULL_TILE_POOL: Tile[] = [
-  ...makeProductTiles('tuna',        'Tuna',         'טונה',         'tuna.png',          21),
-  ...makeProductTiles('doritos',     'Doritos',      'דוריטוס',      'doritos.png',        20),
-  ...makeProductTiles('pringles',    'Pringles',     'פרינגלס',      'pringels.png',       18),
-  ...makeProductTiles('chips',       'Chips',        "צ'יפס",        'round crisps.png',   18),
-  ...makeProductTiles('soup',        'Soup',         'מרק',          'soup.png',           18),
-  ...makeProductTiles('orangejuice', 'Orange Juice', 'מיץ תפוזים',   'orangejuice.png',    15),
-  ...makeProductTiles('cans',        'Cans',         'שימורים',      'cans.png',           17),
-  ...makeProductTiles('ketchup',     'Ketchup',      'קטשופ',        'ketchup.png',        17),
-  ...Array.from({ length: 4 }, () => ({
-    id: uid('sale'), type: 'SALE' as const, name: 'Sale', nameHe: 'מבצע', imageFile: 'HEB-SALE.png',
-  })),
-  ...Array.from({ length: 3 }, () => ({
-    id: uid('switch'), type: 'SWITCH' as const, name: 'Switch', nameHe: 'החלפה', imageFile: 'switch.png',
-  })),
-  ...Array.from({ length: 3 }, () => ({
-    id: uid('push'), type: 'PUSH' as const, name: 'Push', nameHe: 'דחיפה', imageFile: 'push.png',
-  })),
-  ...Array.from({ length: 2 }, () => ({
-    id: uid('steal'), type: 'STEAL' as const, name: 'Steal', nameHe: 'גניבה', imageFile: 'steal.png',
-  })),
-];
+/**
+ * Creates a fresh tile pool with new unique object references and unique IDs.
+ */
+export function createTilePool(): Tile[] {
+  return [
+    ...makeProductTiles('tuna',        'Tuna',         'טונה',         'tuna.png',          21),
+    ...makeProductTiles('doritos',     'Doritos',      'דוריטוס',      'doritos.png',        20),
+    ...makeProductTiles('pringles',    'Pringles',     'פרינגלס',      'pringels.png',       18),
+    ...makeProductTiles('chips',       'Chips',        "צ'יפס",        'round crisps.png',   18),
+    ...makeProductTiles('soup',        'Soup',         'מרק',          'soup.png',           18),
+    ...makeProductTiles('orangejuice', 'Orange Juice', 'מיץ תפוזים',   'orangejuice.png',    15),
+    ...makeProductTiles('cans',        'Cans',         'שימורים',      'cans.png',           17),
+    ...makeProductTiles('ketchup',     'Ketchup',      'קטשופ',        'ketchup.png',        17),
+    ...Array.from({ length: 4 }, () => ({
+      id: uid('sale'), type: 'SALE' as const, name: 'Sale', nameHe: 'מבצע', imageFile: 'HEB-SALE.png',
+    })),
+    ...Array.from({ length: 3 }, () => ({
+      id: uid('switch'), type: 'SWITCH' as const, name: 'Switch', nameHe: 'החלפה', imageFile: 'switch.png',
+    })),
+    ...Array.from({ length: 3 }, () => ({
+      id: uid('push'), type: 'PUSH' as const, name: 'Push', nameHe: 'דחיפה', imageFile: 'push.png',
+    })),
+    ...Array.from({ length: 2 }, () => ({
+      id: uid('steal'), type: 'STEAL' as const, name: 'Steal', nameHe: 'גניבה', imageFile: 'steal.png',
+    })),
+  ];
+}
 
 export const TILE_BACK: Tile = {
   id: 'tile-back', type: 'PRODUCT', name: 'Hidden', nameHe: 'נסתר', imageFile: 'heb-back-yellow.png',

@@ -1,5 +1,5 @@
 import type { GameState, Player, Tile, GameSettings, ActionPhase } from '../types/game';
-import { FULL_TILE_POOL, MISSION_CARDS, PUSH_PLACEHOLDER } from '../data/tiles';
+import { createTilePool, MISSION_CARDS, PUSH_PLACEHOLDER } from '../data/tiles';
 import { checkWin } from './validators';
 
 export function shuffle<T>(arr: T[]): T[] {
@@ -17,7 +17,7 @@ export function generateId(): string {
 
 export function setupGame(settings: GameSettings): GameState {
   const { playerCount, humanCount, aiLevel } = settings;
-  let drawPool = shuffle([...FULL_TILE_POOL]);
+  let drawPool = shuffle(createTilePool());
   const missionsPool = shuffle([...MISSION_CARDS]);
 
   const players: Player[] = Array.from({ length: playerCount }, (_, i) => ({
@@ -63,6 +63,7 @@ export function setupGame(settings: GameSettings): GameState {
     winnerId: null,
     overallWinnerId: null,
     drawnTile: null,
+    drawnFromDiscard: false,
     actionPhase: 'IDLE',
     selectedOwnSlot: null,
     selectedTargetPlayerId: null,
@@ -80,7 +81,7 @@ export function drawFromPool(state: GameState): GameState {
     allDiscarded = [];
   }
 
-  const tile = pool.pop()!;
+  const tile = { ...pool.pop()! };
   const currentPlayer = state.players[state.currentTurnIndex];
 
   let actionPhase: ActionPhase = 'TILE_DRAWN';
@@ -94,7 +95,15 @@ export function drawFromPool(state: GameState): GameState {
     actionPhase = 'PUSH_SELECT_TARGET';
   }
 
-  return checkAnyPlayerWin({ ...state, drawPool: pool, allDiscarded, drawnTile: tile, actionPhase, lastAction: 'draw_pool' });
+  return checkAnyPlayerWin({
+    ...state,
+    drawPool: pool,
+    allDiscarded,
+    drawnTile: tile,
+    drawnFromDiscard: false,
+    actionPhase,
+    lastAction: 'draw_pool'
+  });
 }
 
 export function drawFromNeighbourDiscard(state: GameState): GameState {
@@ -102,7 +111,9 @@ export function drawFromNeighbourDiscard(state: GameState): GameState {
   const rightIdx = (state.currentTurnIndex + 1) % players.length;
   if (players[rightIdx].discardPile.length === 0) return state;
 
-  const tile = players[rightIdx].discardPile.shift()!;
+  // Take top tile from right neighbour's discard pile
+  const rawTile = players[rightIdx].discardPile.shift()!;
+  const tile = { ...rawTile }; // Fresh clone object to prevent reference mutations!
   const currentPlayer = players[state.currentTurnIndex];
 
   let actionPhase: ActionPhase = 'TILE_DRAWN';
@@ -111,7 +122,15 @@ export function drawFromNeighbourDiscard(state: GameState): GameState {
   else if (tile.type === 'STEAL') actionPhase = 'STEAL_SELECT_TARGET';
   else if (tile.type === 'PUSH') actionPhase = 'PUSH_SELECT_TARGET';
 
-  return checkAnyPlayerWin({ ...state, players, drawnTile: tile, actionPhase, lastAction: 'draw_discard' });
+  // Set drawnFromDiscard: true — player MUST place it onto their shelf board!
+  return checkAnyPlayerWin({
+    ...state,
+    players,
+    drawnTile: tile,
+    drawnFromDiscard: true,
+    actionPhase,
+    lastAction: 'draw_discard'
+  });
 }
 
 export function placeTileOnShelf(state: GameState, slotIndex: number): GameState {
@@ -144,7 +163,13 @@ export function placeTileOnShelf(state: GameState, slotIndex: number): GameState
   }
 
   players[state.currentTurnIndex] = player;
-  const next = { ...state, players, drawnTile: null, actionPhase: 'IDLE' as ActionPhase };
+  const next = {
+    ...state,
+    players,
+    drawnTile: null,
+    drawnFromDiscard: false,
+    actionPhase: 'IDLE' as ActionPhase
+  };
   return checkAndAdvance(next);
 }
 
@@ -178,10 +203,12 @@ export function claimWin(state: GameState, playerId: string): GameState {
 }
 
 export function discardDrawnTile(state: GameState): GameState {
-  if (!state.drawnTile) return state;
+  // If tile was drawn from neighbour's discard, player MUST place it onto their shelf board!
+  if (!state.drawnTile || state.drawnFromDiscard) return state;
+
   const players = state.players.map(p => ({ ...p, discardPile: [...p.discardPile] }));
   players[state.currentTurnIndex].discardPile = [state.drawnTile, ...players[state.currentTurnIndex].discardPile];
-  return advanceTurn({ ...state, players, drawnTile: null, actionPhase: 'IDLE' as ActionPhase });
+  return advanceTurn({ ...state, players, drawnTile: null, drawnFromDiscard: false, actionPhase: 'IDLE' as ActionPhase });
 }
 
 export function executeSwitchAction(state: GameState, ownSlot: number, targetId: string, targetSlot: number): GameState {
@@ -193,7 +220,17 @@ export function executeSwitchAction(state: GameState, ownSlot: number, targetId:
   [cur.shelf[ownSlot], tgt.shelf[targetSlot]] = [tgt.shelf[targetSlot], cur.shelf[ownSlot]];
   players[state.currentTurnIndex] = cur;
   players[tIdx] = tgt;
-  return checkAndAdvance({ ...state, players, drawnTile: null, actionPhase: 'IDLE' as ActionPhase, selectedOwnSlot: null, selectedTargetPlayerId: null, selectedTargetSlot: null, lastAction: 'switch' });
+  return checkAndAdvance({
+    ...state,
+    players,
+    drawnTile: null,
+    drawnFromDiscard: false,
+    actionPhase: 'IDLE' as ActionPhase,
+    selectedOwnSlot: null,
+    selectedTargetPlayerId: null,
+    selectedTargetSlot: null,
+    lastAction: 'switch'
+  });
 }
 
 export function executeStealAction(state: GameState, targetId: string, targetSlot: number, ownSlot: number): GameState {
@@ -205,18 +242,27 @@ export function executeStealAction(state: GameState, targetId: string, targetSlo
   const stolen = tgt.shelf[targetSlot];
   if (!stolen) return state;
 
-  // RULE: If stolen tile is SALE, check if current player already has a SALE tile
   if (stolen.type === 'SALE' && cur.shelf.some((t, idx) => idx !== ownSlot && t?.type === 'SALE')) {
     return state; // cannot steal a second SALE tile
   }
 
   const displaced = cur.shelf[ownSlot];
-  cur.shelf[ownSlot] = stolen;
+  cur.shelf[ownSlot] = { ...stolen };
   tgt.shelf[targetSlot] = null;
   if (displaced) cur.discardPile = [displaced, ...cur.discardPile];
   players[state.currentTurnIndex] = cur;
   players[tIdx] = tgt;
-  return checkAndAdvance({ ...state, players, drawnTile: null, actionPhase: 'IDLE' as ActionPhase, selectedOwnSlot: null, selectedTargetPlayerId: null, selectedTargetSlot: null, lastAction: 'steal' });
+  return checkAndAdvance({
+    ...state,
+    players,
+    drawnTile: null,
+    drawnFromDiscard: false,
+    actionPhase: 'IDLE' as ActionPhase,
+    selectedOwnSlot: null,
+    selectedTargetPlayerId: null,
+    selectedTargetSlot: null,
+    lastAction: 'steal'
+  });
 }
 
 export function executePushAction(state: GameState, targetId: string, targetSlot: number): GameState {
@@ -231,7 +277,17 @@ export function executePushAction(state: GameState, targetId: string, targetSlot
   tgt.hasPushPlaceholder = true;
   tgt.pushSlotIndex = targetSlot;
   players[tIdx] = tgt;
-  return checkAndAdvance({ ...state, players, drawnTile: null, actionPhase: 'IDLE' as ActionPhase, selectedOwnSlot: null, selectedTargetPlayerId: null, selectedTargetSlot: null, lastAction: 'push' });
+  return checkAndAdvance({
+    ...state,
+    players,
+    drawnTile: null,
+    drawnFromDiscard: false,
+    actionPhase: 'IDLE' as ActionPhase,
+    selectedOwnSlot: null,
+    selectedTargetPlayerId: null,
+    selectedTargetSlot: null,
+    lastAction: 'push'
+  });
 }
 
 function checkAnyPlayerWin(state: GameState): GameState {
@@ -252,7 +308,14 @@ function checkAndAdvance(state: GameState): GameState {
 
 export function advanceTurn(state: GameState): GameState {
   const next = (state.currentTurnIndex + 1) % state.players.length;
-  return { ...state, currentTurnIndex: next, actionPhase: 'IDLE', drawnTile: null, lastAction: null };
+  return {
+    ...state,
+    currentTurnIndex: next,
+    actionPhase: 'IDLE',
+    drawnTile: null,
+    drawnFromDiscard: false,
+    lastAction: null
+  };
 }
 
 function endRound(state: GameState, winnerId: string): GameState {
@@ -262,14 +325,19 @@ function endRound(state: GameState, winnerId: string): GameState {
 
   if (newMissionsPool.length < players.length) {
     const overall = [...players].sort((a, b) => b.score - a.score)[0];
-    return { ...state, players, usedMissions, gameStatus: 'GAME_OVER', winnerId, overallWinnerId: overall.id, missionsPool: [], lastAction: 'game_over' };
+    return {
+      ...state,
+      players,
+      usedMissions,
+      gameStatus: 'GAME_OVER',
+      winnerId,
+      overallWinnerId: overall.id,
+      missionsPool: [],
+      lastAction: 'game_over'
+    };
   }
 
-  const allTiles = shuffle([
-    ...state.drawPool,
-    ...state.allDiscarded,
-    ...players.flatMap(p => [...p.discardPile, ...(p.shelf.filter(Boolean) as Tile[])]),
-  ]);
+  const allTiles = shuffle(createTilePool());
 
   const resetPlayers = players.map(p => ({
     ...p,
@@ -294,7 +362,23 @@ function endRound(state: GameState, winnerId: string): GameState {
     rp.shelf = shelf;
   }
 
-  return { ...state, players: resetPlayers, currentTurnIndex: 0, drawPool, allDiscarded: [], missionsPool: newMissionsPool, usedMissions, gameStatus: 'ROUND_OVER', roundNumber: state.roundNumber + 1, winnerId, overallWinnerId: null, drawnTile: null, actionPhase: 'IDLE', lastAction: 'round_over' };
+  return {
+    ...state,
+    players: resetPlayers,
+    currentTurnIndex: 0,
+    drawPool,
+    allDiscarded: [],
+    missionsPool: newMissionsPool,
+    usedMissions,
+    gameStatus: 'ROUND_OVER',
+    roundNumber: state.roundNumber + 1,
+    winnerId,
+    overallWinnerId: null,
+    drawnTile: null,
+    drawnFromDiscard: false,
+    actionPhase: 'IDLE',
+    lastAction: 'round_over'
+  };
 }
 
 export function startNextRound(state: GameState): GameState {

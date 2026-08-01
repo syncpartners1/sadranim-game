@@ -23,14 +23,16 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
 
   const currentPlayer = state.players[state.currentTurnIndex];
   const humanPlayer = state.players.find(p => p.type === 'HUMAN') ?? currentPlayer;
-  const { drawnTile, actionPhase, selectedOwnSlot, selectedTargetPlayerId, selectedTargetSlot } = state;
+  const { drawnTile, drawnFromDiscard, actionPhase, selectedOwnSlot, selectedTargetPlayerId, selectedTargetSlot } = state;
 
   const isHumanTurn = currentPlayer.type === 'HUMAN';
   const isHumanWinReady = checkWin(humanPlayer, state);
 
   const phaseInstructions: Record<ActionPhase, string> = {
-    IDLE: 'שלוף אריח מהקופה או מההשלכות',
-    TILE_DRAWN: 'הנח במדף שלך או זרוק להשלכות',
+    IDLE: 'שלוף אריח מהקופה או מההשלכות של השכן',
+    TILE_DRAWN: drawnFromDiscard
+      ? 'לקחת אריח מהשכן — חובה להניח אותו במדף!'
+      : 'הנח במדף שלך או זרוק להשלכות',
     SWITCH_SELECT_OWN: 'בחר אריח מהמדף שלך להחלפה',
     SWITCH_SELECT_TARGET: 'בחר אריח מתוך מדף של יריב',
     STEAL_SELECT_TARGET: 'בחר אריח ממדף יריב לגניבה',
@@ -53,7 +55,7 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
       <div className="flex items-center justify-between w-full gap-2 flex-wrap">
         <AnimatePresence mode="wait">
           <motion.div
-            key={actionPhase}
+            key={actionPhase + (drawnFromDiscard ? '-discard' : '')}
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
@@ -98,7 +100,9 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
       <div className="flex items-center justify-center gap-6">
         {drawnTile && (
           <div className="flex flex-col items-center gap-1">
-            <span className="text-white/50 text-xs">אריח שנשלף</span>
+            <span className="text-white/50 text-xs">
+              {drawnFromDiscard ? 'אריח שנלקח מהשכן' : 'אריח שנשלף'}
+            </span>
             <AnimatePresence>
               <motion.div
                 key={drawnTile.id}
@@ -118,13 +122,19 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ state }) => {
           <div className="flex flex-col gap-2 items-center">
             {actionPhase === 'TILE_DRAWN' && drawnTile && (
               <>
-                <button
-                  onClick={discardTile}
-                  className="px-4 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-300 rounded-xl border border-red-500/30 text-sm font-semibold transition-all shadow"
-                >
-                  🗑 לזרוק להשלכות
-                </button>
-                <p className="text-white/40 text-xs text-center">או לחץ על משבצת במדף להנחה</p>
+                {!drawnFromDiscard ? (
+                  <button
+                    onClick={discardTile}
+                    className="px-4 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-300 rounded-xl border border-red-500/30 text-sm font-semibold transition-all shadow"
+                  >
+                    🗑 לזרוק להשלכות
+                  </button>
+                ) : (
+                  <span className="text-yellow-300/80 text-xs font-bold bg-yellow-500/20 px-3 py-1 rounded-lg border border-yellow-500/30">
+                    🔒 חובה להניח במדף
+                  </span>
+                )}
+                <p className="text-white/40 text-xs text-center">לחץ על משבצת במדף להנחה</p>
               </>
             )}
 

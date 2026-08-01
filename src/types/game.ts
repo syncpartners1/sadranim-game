@@ -70,6 +70,7 @@ export interface GameState {
   winnerId: string | null;       // round winner
   overallWinnerId: string | null; // game winner
   drawnTile: Tile | null;        // tile currently in hand (not yet placed/discarded)
+  drawnFromDiscard?: boolean;    // true when tile was drawn from neighbour's discard (MUST place on shelf)
   actionPhase: ActionPhase;
   // For switch/steal/push — which slots are selected
   selectedOwnSlot: number | null;
