@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['assets/**/*', 'favicon.ico'],
       manifest: {
-        name: 'סידור המדפים — Shelf Sorting Game',
-        short_name: 'Sadranim',
-        description: 'The Shelf Sorting board game — supermarket tile placement strategy',
+        name: 'הסדרנים — משחק סידור מדפים',
+        short_name: 'הסדרנים',
+        description: 'הסדרנים — משחק לוח ואסטרטגיה של סידור מדפים בסופרמרקט',
         theme_color: '#0f172a',
         background_color: '#0f172a',
         display: 'standalone',

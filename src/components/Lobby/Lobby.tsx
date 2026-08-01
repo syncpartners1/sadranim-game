@@ -18,15 +18,15 @@ export const Lobby: React.FC = () => {
         transition={{ type: 'spring', stiffness: 200, damping: 20 }}
       >
         <div className="flex flex-col items-center gap-2">
-          <img src="/assets/cards/jambo front.png" alt="Sadranim" className="w-24 rounded-xl shadow-lg" />
-          <h1 className="text-3xl font-black text-white tracking-tight">
-            סידור <span className="text-yellow-400">המדפים</span>
+          <img src="/assets/cards/jambo front.png" alt="הסדרנים" className="w-24 rounded-xl shadow-lg" />
+          <h1 className="text-4xl font-black text-yellow-400 tracking-tight">
+            הסדרנים
           </h1>
-          <p className="text-white/50 text-sm text-center">Shelf Sorting Game</p>
+          <p className="text-white/50 text-sm text-center">משחק סידור מדפים בסופרמרקט</p>
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-white/70 text-sm font-semibold">Number of Players</label>
+          <label className="text-white/70 text-sm font-semibold">מספר שחקנים</label>
           <div className="flex gap-2">
             {[2, 3, 4].map(n => (
               <button
@@ -38,14 +38,14 @@ export const Lobby: React.FC = () => {
                     : 'bg-white/10 text-white/70 border-white/20 hover:bg-white/20'
                 }`}
               >
-                {n} Players
+                {n} שחקנים
               </button>
             ))}
           </div>
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-white/70 text-sm font-semibold">Human Players</label>
+          <label className="text-white/70 text-sm font-semibold">שחקנים אנושיים</label>
           <div className="flex gap-2">
             {Array.from({ length: totalPlayers }, (_, i) => i + 1).map(n => (
               <button
@@ -57,18 +57,18 @@ export const Lobby: React.FC = () => {
                     : 'bg-white/10 text-white/70 border-white/20 hover:bg-white/20'
                 }`}
               >
-                {n === 1 ? '1 (vs AI)' : n === totalPlayers ? `${n} (Pass & Play)` : n}
+                {n === 1 ? '1 (נגד AI)' : n === totalPlayers ? `${n} (Pass & Play)` : n}
               </button>
             ))}
           </div>
           {aiCount > 0 && (
-            <p className="text-white/40 text-xs text-center">{aiCount} AI bot{aiCount > 1 ? 's' : ''} will play</p>
+            <p className="text-white/40 text-xs text-center">{aiCount} בוטים ישחקו איתך</p>
           )}
         </div>
 
         {aiCount > 0 && (
           <div className="flex flex-col gap-2">
-            <label className="text-white/70 text-sm font-semibold">AI Difficulty</label>
+            <label className="text-white/70 text-sm font-semibold">רמת קושי ה-AI</label>
             <div className="flex gap-2">
               {(['EASY', 'MEDIUM', 'HARD'] as AILevel[]).map(level => (
                 <button
@@ -82,7 +82,7 @@ export const Lobby: React.FC = () => {
                       : 'bg-white/10 text-white/70 border-white/20 hover:bg-white/20'
                   }`}
                 >
-                  {level === 'EASY' ? '😊 Easy' : level === 'MEDIUM' ? '🎯 Medium' : '🔥 Hard'}
+                  {level === 'EASY' ? '😊 קל' : level === 'MEDIUM' ? '🎯 בינוני' : '🔥 קשה'}
                 </button>
               ))}
             </div>
@@ -91,24 +91,25 @@ export const Lobby: React.FC = () => {
 
         <motion.button
           onClick={startGame}
-          className="w-full py-4 bg-gradient-to-r from-yellow-400 to-orange-400 text-slate-900 font-black text-lg rounded-2xl shadow-lg shadow-yellow-400/30"
+          className="w-full py-4 bg-gradient-to-r from-yellow-400 to-orange-400 text-slate-900 font-black text-xl rounded-2xl shadow-lg shadow-yellow-400/30"
           whileHover={{ scale: 1.03, boxShadow: '0 0 30px rgba(250,204,21,0.5)' }}
           whileTap={{ scale: 0.97 }}
         >
-          🛒 Start Game!
+          🛒 להתחיל לשחק!
         </motion.button>
 
-        <details className="text-white/40 text-xs">
-          <summary className="cursor-pointer text-white/60 font-medium">How to play</summary>
-          <ul className="mt-2 space-y-1 list-disc list-inside leading-relaxed">
-            <li>Match your shelf to the secret mission card</li>
-            <li>Each turn: draw a tile, then place or discard it</li>
-            <li>🔴 Push — knock a tile off a neighbour's shelf</li>
-            <li>🔵 Switch — swap your tile with an opponent's</li>
-            <li>💛 Steal — take any tile from an opponent's shelf</li>
-            <li>⭐ Sale — wildcard, counts as any product (max 1)</li>
-            <li>First to match their mission wins the round!</li>
-            <li>Game ends after all 18 missions are used</li>
+        <details className="text-white/40 text-xs" dir="rtl">
+          <summary className="cursor-pointer text-white/60 font-medium">איך משחקים?</summary>
+          <ul className="mt-2 space-y-1 list-disc list-inside leading-relaxed text-right">
+            <li>סדר את המדף שלך לפי כרטיס המשימה הסודי</li>
+            <li>בכל תור: שלוף אריח, הנח במדף או זרוק להשלכות</li>
+            <li>ניתן להחליף מיקומים במדף שלך בכל עת ללא איבוד תור!</li>
+            <li>🔴 Push (דחיפה) — דוחף אריח ממדף שכן</li>
+            <li>🔵 Switch (החלפה) — מחליף אריח מול שחקן יריב</li>
+            <li>💛 Steal (גניבה) — גונב אריח ממדף יריב</li>
+            <li>⭐ Sale (מבצע) — ג'וקר המשמש ככל מוצר (עד 1 במדף)</li>
+            <li>הראשון שמסיים את המדף מנצח בסבב!</li>
+            <li>המשחק מסתיים לאחר 18 סבבים</li>
           </ul>
         </details>
       </motion.div>
