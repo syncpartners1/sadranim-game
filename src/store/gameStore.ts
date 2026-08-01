@@ -131,12 +131,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
     scheduleAI(s, set, get);
   },
 
-  selectOwnSlot: (slot) => set(st => ({
-    state: st.state ? { ...st.state, selectedOwnSlot: slot, actionPhase: 'SWITCH_SELECT_TARGET' as ActionPhase } : null,
-  })),
+  selectTargetSlot: (playerId, slot) => set(st => {
+    if (!st.state) return { state: null };
+    // If in SWITCH_SELECT_TARGET phase, store target first, then switch to SWITCH_SELECT_OWN
+    const nextPhase = st.state.actionPhase === 'SWITCH_SELECT_TARGET'
+      ? ('SWITCH_SELECT_OWN' as ActionPhase)
+      : st.state.actionPhase;
+    return {
+      state: {
+        ...st.state,
+        selectedTargetPlayerId: playerId,
+        selectedTargetSlot: slot,
+        actionPhase: nextPhase,
+      },
+    };
+  }),
 
-  selectTargetSlot: (playerId, slot) => set(st => ({
-    state: st.state ? { ...st.state, selectedTargetPlayerId: playerId, selectedTargetSlot: slot } : null,
+  selectOwnSlot: (slot) => set(st => ({
+    state: st.state ? { ...st.state, selectedOwnSlot: slot } : null,
   })),
 
   confirmSwitch: () => {
@@ -199,11 +211,8 @@ function setupFirestoreSubscription(roomCode: string, set: any, get: any) {
     const current = get().state;
     if (!current) return;
 
-    // Safety Guard 1: In single player mode (vs AI bots), local state is 100% authoritative.
-    // Do NOT allow Firestore snapshots to overwrite local turn state!
     if (get().settings.humanCount === 1) return;
 
-    // Safety Guard 2: In multiplayer mode, do NOT overwrite if the local human player is currently handling a tile
     const currentPlayer = current.players[current.currentTurnIndex];
     if (currentPlayer?.type === 'HUMAN' && (current.drawnTile || current.actionPhase !== 'IDLE')) {
       return;

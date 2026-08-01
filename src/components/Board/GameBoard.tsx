@@ -7,7 +7,7 @@ import { ActionPanel } from '../ActionPanel/ActionPanel';
 import { MissionCardComponent } from '../MissionCard/MissionCard';
 import { RulesModal } from '../RulesModal/RulesModal';
 import { useGameStore } from '../../store/gameStore';
-import { canDrawFromNeighbourDiscard, getAdjacentPlayerIndices } from '../../engine/validators';
+import { canDrawFromNeighbourDiscard, getAdjacentPlayerIndices } from '../../engine/validators.ts';
 
 interface GameBoardProps {
   state: GameState;
@@ -29,14 +29,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [isRulesOpen, setIsRulesOpen] = useState<boolean>(false);
 
-  // Reliably identify the human player slot (even when temporarily converted to AI bot)
   const human = state.players.find(p => p.wasHuman || p.id === 'player-0') ?? state.players[0];
   const humanIdx = state.players.indexOf(human);
   const isHumanBotControlled = human.type === 'AI' || human.name.includes('(Bot)');
 
   const currentPlayer = state.players[state.currentTurnIndex];
   const isHumanTurn = currentPlayer.id === human.id && !isHumanBotControlled;
-  const { actionPhase, selectedTargetPlayerId, turnStartTimestamp } = state;
+  const { actionPhase, selectedTargetPlayerId, selectedOwnSlot, selectedTargetSlot, turnStartTimestamp } = state;
 
   useEffect(() => {
     if (state.gameStatus !== 'PLAYING') return;
@@ -195,6 +194,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
             {(() => {
               const playerIdx = state.players.indexOf(activeMobileOpponent);
               const isCurrent = state.currentTurnIndex === playerIdx;
+              const isTargeted = selectedTargetPlayerId === activeMobileOpponent.id;
+
               return (
                 <div key={activeMobileOpponent.id} className="flex flex-col items-center">
                   <Shelf
@@ -205,6 +206,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
                     actionPhase={actionPhase}
                     isTargetable={isPlayerTargetable(playerIdx)}
                     selectedTargetPlayerId={selectedTargetPlayerId}
+                    highlightSlots={isTargeted && selectedTargetSlot !== null ? [selectedTargetSlot] : []}
                     onSlotClick={isPlayerTargetable(playerIdx)
                       ? (slot) => handleShelfSlotClick(playerIdx, slot)
                       : undefined
@@ -227,6 +229,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
         {opponents.map((opp) => {
           const playerIdx = state.players.indexOf(opp);
           const isCurrent = state.currentTurnIndex === playerIdx;
+          const isTargeted = selectedTargetPlayerId === opp.id;
+
           return (
             <div key={opp.id} className="flex flex-col items-center">
               <Shelf
@@ -237,6 +241,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
                 actionPhase={actionPhase}
                 isTargetable={isPlayerTargetable(playerIdx)}
                 selectedTargetPlayerId={selectedTargetPlayerId}
+                highlightSlots={isTargeted && selectedTargetSlot !== null ? [selectedTargetSlot] : []}
                 onSlotClick={isPlayerTargetable(playerIdx)
                   ? (slot) => handleShelfSlotClick(playerIdx, slot)
                   : undefined
@@ -309,7 +314,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ state, isAIThinking }) => 
                 highlightSlots={
                   human.hasPushPlaceholder && human.pushSlotIndex !== null
                     ? [human.pushSlotIndex]
-                    : []
+                    : selectedOwnSlot !== null
+                      ? [selectedOwnSlot]
+                      : []
                 }
               />
             </div>
