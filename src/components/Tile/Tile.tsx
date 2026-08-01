@@ -26,6 +26,7 @@ const tileTypeColors: Record<string, string> = {
   SALE: 'ring-2 ring-red-400 shadow-red-400/40',
   SWITCH: 'ring-2 ring-blue-400 shadow-blue-400/40',
   PUSH: 'ring-2 ring-orange-400 shadow-orange-400/40',
+  EMPTYBOX: 'ring-2 ring-purple-400 shadow-purple-400/40',
 };
 
 export const TileComponent: React.FC<TileProps> = ({

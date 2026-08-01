@@ -2,7 +2,7 @@ import type { Tile, MissionCard, ProductId } from '../types/game';
 
 // ─── Product Tile Counts (from patterns.xlsx) ────────────────────────────────
 // Tuna:21  Doritos:20  Pringles:18  Chips:18  Soup:18  OJ:15  Cans:17  Ketchup:17
-// Special Tiles (3 Types): SALE×10  SWITCH×10  PUSH×10
+// Special Tiles (4 Types): SALE×10  SWITCH×10  PUSH×10  EMPTYBOX×10
 
 let _tileIdCounter = 0;
 const uid = (prefix: string) => `${prefix}-${++_tileIdCounter}-${Math.random().toString(36).slice(2, 6)}`;
@@ -38,7 +38,7 @@ export function createTilePool(): Tile[] {
     ...makeProductTiles('cans',        'Cans',         'שימורים',      'cans.png',           17),
     ...makeProductTiles('ketchup',     'Ketchup',      'קטשופ',        'ketchup.png',        17),
 
-    // Special Action Tiles — 10x SALE (מבצע), 10x SWITCH (החלפה), 10x PUSH (דחיפה)
+    // Special Action & Obstacle Tiles — 10x SALE (מבצע), 10x SWITCH (החלפה), 10x PUSH (דחיפה), 10x EMPTYBOX (קופסה ריקה)
     ...Array.from({ length: 10 }, () => ({
       id: uid('sale'), type: 'SALE' as const, name: 'Sale', nameHe: 'מבצע', imageFile: 'HEB-SALE.png',
     })),
@@ -47,6 +47,9 @@ export function createTilePool(): Tile[] {
     })),
     ...Array.from({ length: 10 }, () => ({
       id: uid('push'), type: 'PUSH' as const, name: 'Push', nameHe: 'דחיפה', imageFile: 'push.png',
+    })),
+    ...Array.from({ length: 10 }, () => ({
+      id: uid('emptybox'), type: 'EMPTYBOX' as const, name: 'Empty Box', nameHe: 'קופסה ריקה', imageFile: 'emptybox.png',
     })),
   ];
 }

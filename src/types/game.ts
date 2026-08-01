@@ -12,7 +12,7 @@ export type ProductId =
   | 'chips'
   | 'pringles';
 
-export type SpecialTileType = 'SALE' | 'SWITCH' | 'PUSH';
+export type SpecialTileType = 'SALE' | 'SWITCH' | 'PUSH' | 'EMPTYBOX';
 export type TileType = 'PRODUCT' | SpecialTileType;
 
 export interface Tile {

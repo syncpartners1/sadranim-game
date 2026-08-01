@@ -7,7 +7,8 @@ import type { Player, GameState, Tile } from '../types/game';
  *   2. No PUSH placeholder active.
  *   3. At most 1 SALE (מבצע) tile allowed on the shelf!
  *   4. A SALE tile acts as a wildcard for ANY required product at its position.
- *   5. All other 7 slots must match the exact product required by the mission pattern.
+ *   5. Action/Obstacle tiles (SWITCH, PUSH, EMPTYBOX) cannot remain on shelf for a win!
+ *   6. All other 7 slots must match the exact product required by the mission pattern.
  */
 export function checkWin(player: Player, _state?: GameState): boolean {
   const { shelf, mission, hasPushPlaceholder } = player;
@@ -16,8 +17,8 @@ export function checkWin(player: Player, _state?: GameState): boolean {
 
   const shelfTiles = shelf as Tile[];
 
-  // Action tiles (SWITCH, PUSH) cannot remain on shelf
-  if (shelfTiles.some(t => t.type === 'SWITCH' || t.type === 'PUSH')) {
+  // Action/Obstacle tiles (SWITCH, PUSH, EMPTYBOX) cannot remain on shelf for a win!
+  if (shelfTiles.some(t => t.type === 'SWITCH' || t.type === 'PUSH' || t.type === 'EMPTYBOX')) {
     return false;
   }
 
@@ -53,6 +54,7 @@ export function getSlotMatches(player: Player): boolean[] {
   return player.shelf.map((tile, i) => {
     if (!tile) return false;
     if (tile.type === 'SALE') return true; // Wildcard
+    if (tile.type === 'EMPTYBOX') return false; // Empty box obstacle cannot match
     return tile.type === 'PRODUCT' && tile.productId === player.mission!.pattern[i];
   });
 }

@@ -63,13 +63,16 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
               <h3 className="font-bold text-sm text-yellow-300">✨ אריחים מיוחדים:</h3>
               <ul className="space-y-2 text-white/90">
                 <li>
-                  🔵 <strong className="text-blue-300">Switch (החלפה):</strong> מאפשר להחליף אריח מהמדף שלך מול אריח במדף של כל שחקן יריב אחר.
+                  🔵 <strong className="text-blue-300">Switch (החלפה):</strong> 1. בחר אריח במדף של השכן, 2. בחר אריח במדף שלך, 3. לחץ אישור החלפה!
                 </li>
                 <li>
-                  🔴 <strong className="text-orange-300">Push (דחיפה):</strong> מאפשר למקם את אריח הדחיפה במדף של שחקן אחר במקום אריח קיים. האריח שהוחלף נחשב כנזרק ועובר לערמת ההשלכות של היריב!
+                  🔴 <strong className="text-orange-300">Push (דחיפה):</strong> בחר אריח במדף השכן הרלוונטי ולחץ אישור דחיפה. האריח שהיה של השכן נדחק להשלכות!
                 </li>
                 <li>
                   ⭐ <strong className="text-emerald-300">Sale (מבצע):</strong> ג'וקר המשמש ככל מוצר חסר (מותר לכל היותר אריח מבצע 1 למדף).
+                </li>
+                <li>
+                  📦 <strong className="text-purple-300">Empty Box (קופסה ריקה):</strong> אריח שממלא משבצת במקום מוצר. <strong className="text-red-400">לא ניתן להשלים משימה ולנצח כשאריח קופסה ריקה נמצא על המדף!</strong> יש להחליפו במוצר הנדרש.
                 </li>
               </ul>
             </div>
