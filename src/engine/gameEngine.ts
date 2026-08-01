@@ -230,8 +230,13 @@ export function discardDrawnTile(state: GameState): GameState {
   return advanceTurn({ ...state, players, drawnTile: null, drawnFromDiscard: false, actionPhase: 'IDLE' as ActionPhase });
 }
 
+/**
+ * SWITCH Tile Action:
+ * Swaps a tile from player's own shelf slot with any tile from any opponent's shelf slot.
+ * The drawn SWITCH tile is discarded into player's discard pile.
+ */
 export function executeSwitchAction(state: GameState, ownSlot: number, targetId: string, targetSlot: number): GameState {
-  const players = state.players.map(p => ({ ...p, shelf: [...p.shelf] }));
+  const players = state.players.map(p => ({ ...p, shelf: [...p.shelf], discardPile: [...p.discardPile] }));
   const cur = players[state.currentTurnIndex];
   const tIdx = players.findIndex(p => p.id === targetId);
   if (tIdx < 0) return state;
@@ -242,6 +247,11 @@ export function executeSwitchAction(state: GameState, ownSlot: number, targetId:
 
   cur.shelf[ownSlot] = targetTile;
   tgt.shelf[targetSlot] = ownTile;
+
+  // Discard the played SWITCH tile
+  if (state.drawnTile) {
+    cur.discardPile = [{ ...state.drawnTile }, ...cur.discardPile];
+  }
 
   players[state.currentTurnIndex] = cur;
   players[tIdx] = tgt;
@@ -258,19 +268,33 @@ export function executeSwitchAction(state: GameState, ownSlot: number, targetId:
   });
 }
 
+/**
+ * PUSH Tile Action:
+ * Places the PUSH tile directly onto target opponent's shelf slot.
+ * The opponent's existing tile at that slot is displaced and added to opponent's discard pile.
+ */
 export function executePushAction(state: GameState, targetId: string, targetSlot: number): GameState {
   const players = state.players.map(p => ({ ...p, shelf: [...p.shelf], discardPile: [...p.discardPile] }));
+  const cur = players[state.currentTurnIndex];
   const tIdx = players.findIndex(p => p.id === targetId);
   if (tIdx < 0) return state;
   const tgt = players[tIdx];
-  const pushed = tgt.shelf[targetSlot];
-  if (!pushed) return state;
 
-  tgt.discardPile = [{ ...pushed }, ...tgt.discardPile];
-  tgt.shelf[targetSlot] = { ...PUSH_PLACEHOLDER, id: `push-ph-${generateId()}` };
+  const displaced = tgt.shelf[targetSlot];
+  if (displaced && displaced.type !== 'PUSH') {
+    // The displaced tile is added to the opponent's discard pile
+    tgt.discardPile = [{ ...displaced }, ...tgt.discardPile];
+  }
+
+  // The PUSH tile is placed onto the target opponent's shelf
+  const pushTile = state.drawnTile ? { ...state.drawnTile } : { ...PUSH_PLACEHOLDER, id: `push-ph-${generateId()}` };
+  tgt.shelf[targetSlot] = pushTile;
   tgt.hasPushPlaceholder = true;
   tgt.pushSlotIndex = targetSlot;
+
+  players[state.currentTurnIndex] = cur;
   players[tIdx] = tgt;
+
   return checkAndAdvance({
     ...state,
     players,
