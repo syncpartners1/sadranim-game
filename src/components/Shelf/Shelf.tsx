@@ -22,6 +22,7 @@ export const Shelf: React.FC<ShelfProps> = ({
   isCurrentPlayer = false,
   isOpponent = false,
   compact = false,
+  actionPhase = 'IDLE',
   selectedTargetPlayerId,
   onSlotClick,
   highlightSlots = [],
@@ -56,7 +57,9 @@ export const Shelf: React.FC<ShelfProps> = ({
   };
 
   const handleSlotClickInternal = (i: number) => {
-    if (allowRearrange) {
+    // Only allow internal click-to-swap when in IDLE phase (no active drawn tile in hand)
+    const isIdle = !actionPhase || actionPhase === 'IDLE';
+    if (allowRearrange && isIdle) {
       if (selectedSlotForSwap === null) {
         setSelectedSlotForSwap(i);
       } else if (selectedSlotForSwap === i) {
@@ -64,8 +67,12 @@ export const Shelf: React.FC<ShelfProps> = ({
       } else {
         swapOwnSlots(selectedSlotForSwap, i);
         setSelectedSlotForSwap(null);
+        return;
       }
+    } else {
+      setSelectedSlotForSwap(null);
     }
+
     if (onSlotClick) {
       onSlotClick(i);
     }
