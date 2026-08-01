@@ -197,9 +197,18 @@ function setupFirestoreSubscription(roomCode: string, set: any, get: any) {
   if (unsubscribeRoom) unsubscribeRoom();
   unsubscribeRoom = subscribeToRoomFirestore(roomCode, (newState) => {
     const current = get().state;
-    if (current && current.drawnTile && !newState.drawnTile && current.currentTurnIndex === newState.currentTurnIndex) {
+    if (!current) return;
+
+    // Safety Guard 1: In single player mode (vs AI bots), local state is 100% authoritative.
+    // Do NOT allow Firestore snapshots to overwrite local turn state!
+    if (get().settings.humanCount === 1) return;
+
+    // Safety Guard 2: In multiplayer mode, do NOT overwrite if the local human player is currently handling a tile
+    const currentPlayer = current.players[current.currentTurnIndex];
+    if (currentPlayer?.type === 'HUMAN' && (current.drawnTile || current.actionPhase !== 'IDLE')) {
       return;
     }
+
     set(() => ({ state: newState }));
   });
 }
