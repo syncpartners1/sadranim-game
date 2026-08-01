@@ -37,7 +37,8 @@ jobs:
             echo "::error::No Firebase secret found in GitHub Secrets. Please add FIREBASE_SERVICE_ACCOUNT_SADRANIM_GAME to Repository Settings -> Secrets and variables -> Actions."
             exit 1
           fi
-          echo "$SA_KEY" > ./sa-key-deploy.json
+          printf '%s\n' "$SA_KEY" > ./sa-key-deploy.json
+          node -e "JSON.parse(require('fs').readFileSync('./sa-key-deploy.json'))" || (echo "::error::Invalid JSON in Secret" && exit 1)
           export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/sa-key-deploy.json"
           npx firebase-tools deploy --only hosting --project sadranim-game --non-interactive
           rm -f ./sa-key-deploy.json
