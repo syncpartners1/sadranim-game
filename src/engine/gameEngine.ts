@@ -109,7 +109,14 @@ export function drawFromPool(state: GameState): GameState {
   }
 
   const rawTile = pool.pop()!;
-  const tile = { ...rawTile };
+  const tile: Tile = {
+    id: rawTile.id,
+    type: rawTile.type,
+    productId: rawTile.productId,
+    name: rawTile.name,
+    nameHe: rawTile.nameHe,
+    imageFile: rawTile.imageFile,
+  };
   const currentPlayer = state.players[state.currentTurnIndex];
 
   let actionPhase: ActionPhase = 'TILE_DRAWN';
@@ -132,13 +139,27 @@ export function drawFromPool(state: GameState): GameState {
   });
 }
 
+/**
+ * Draw tile from the EXACT previous neighbour (neighbour 1).
+ * Drawing from any other player is strictly forbidden.
+ * The drawn tile MUST be placed onto player's shelf board (drawnFromDiscard: true).
+ */
 export function drawFromNeighbourDiscard(state: GameState): GameState {
   const players = state.players.map(p => ({ ...p, discardPile: [...p.discardPile] }));
   const prevIdx = getPreviousPlayerIndex(state);
+  
+  // Can only draw from the exact previous neighbour's discard pile
   if (players[prevIdx].discardPile.length === 0) return state;
 
   const rawTile = players[prevIdx].discardPile.shift()!;
-  const tile = { ...rawTile };
+  const tile: Tile = {
+    id: rawTile.id,
+    type: rawTile.type,
+    productId: rawTile.productId,
+    name: rawTile.name,
+    nameHe: rawTile.nameHe,
+    imageFile: rawTile.imageFile,
+  };
   const currentPlayer = players[state.currentTurnIndex];
 
   let actionPhase: ActionPhase = 'TILE_DRAWN';
@@ -168,7 +189,14 @@ export function placeTileOnShelf(state: GameState, slotIndex: number): GameState
     }
   }
 
-  const tileToPlace = { ...state.drawnTile };
+  const tileToPlace: Tile = {
+    id: state.drawnTile.id,
+    type: state.drawnTile.type,
+    productId: state.drawnTile.productId,
+    name: state.drawnTile.name,
+    nameHe: state.drawnTile.nameHe,
+    imageFile: state.drawnTile.imageFile,
+  };
   const displaced = player.shelf[slotIndex];
 
   player.shelf[slotIndex] = tileToPlace;
@@ -230,11 +258,6 @@ export function discardDrawnTile(state: GameState): GameState {
   return advanceTurn({ ...state, players, drawnTile: null, drawnFromDiscard: false, actionPhase: 'IDLE' as ActionPhase });
 }
 
-/**
- * SWITCH Tile Action:
- * Swaps a tile from player's own shelf slot with any tile from any opponent's shelf slot.
- * The drawn SWITCH tile is discarded into player's discard pile.
- */
 export function executeSwitchAction(state: GameState, ownSlot: number, targetId: string, targetSlot: number): GameState {
   const players = state.players.map(p => ({ ...p, shelf: [...p.shelf], discardPile: [...p.discardPile] }));
   const cur = players[state.currentTurnIndex];
@@ -248,7 +271,6 @@ export function executeSwitchAction(state: GameState, ownSlot: number, targetId:
   cur.shelf[ownSlot] = targetTile;
   tgt.shelf[targetSlot] = ownTile;
 
-  // Discard the played SWITCH tile
   if (state.drawnTile) {
     cur.discardPile = [{ ...state.drawnTile }, ...cur.discardPile];
   }
@@ -268,11 +290,6 @@ export function executeSwitchAction(state: GameState, ownSlot: number, targetId:
   });
 }
 
-/**
- * PUSH Tile Action:
- * Places the PUSH tile directly onto target opponent's shelf slot.
- * The opponent's existing tile at that slot is displaced and added to opponent's discard pile.
- */
 export function executePushAction(state: GameState, targetId: string, targetSlot: number): GameState {
   const players = state.players.map(p => ({ ...p, shelf: [...p.shelf], discardPile: [...p.discardPile] }));
   const cur = players[state.currentTurnIndex];
@@ -282,11 +299,9 @@ export function executePushAction(state: GameState, targetId: string, targetSlot
 
   const displaced = tgt.shelf[targetSlot];
   if (displaced && displaced.type !== 'PUSH') {
-    // The displaced tile is added to the opponent's discard pile
     tgt.discardPile = [{ ...displaced }, ...tgt.discardPile];
   }
 
-  // The PUSH tile is placed onto the target opponent's shelf
   const pushTile = state.drawnTile ? { ...state.drawnTile } : { ...PUSH_PLACEHOLDER, id: `push-ph-${generateId()}` };
   tgt.shelf[targetSlot] = pushTile;
   tgt.hasPushPlaceholder = true;

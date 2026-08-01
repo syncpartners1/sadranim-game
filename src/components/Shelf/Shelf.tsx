@@ -86,7 +86,7 @@ export const Shelf: React.FC<ShelfProps> = ({
         <span>{player.name}</span>
         <span className="text-xs opacity-70">{'⭐'.repeat(player.score)}</span>
         {isCurrentPlayer && (
-          <span className="text-xs text-yellow-300 animate-pulse">← Turn</span>
+          <span className="text-xs text-yellow-300 animate-pulse">← תורו</span>
         )}
       </div>
 
@@ -147,21 +147,8 @@ export const Shelf: React.FC<ShelfProps> = ({
 
       {allowRearrange && (
         <span className="text-[10px] text-yellow-300/70">
-          💡 Drag or click 2 tiles on your shelf to swap position
+          💡 גרור או לחץ על 2 אריחים במדף להחלפת מיקומים
         </span>
-      )}
-
-      {player.discardPile.length > 0 && (
-        <div className="flex items-center gap-1 text-xs text-white/50">
-          <span>🗑</span>
-          <span>{player.discardPile.length} discarded</span>
-          {player.discardPile[0] && (
-            <TileComponent
-              tile={player.discardPile[0]}
-              size="sm"
-            />
-          )}
-        </div>
       )}
     </div>
   );
