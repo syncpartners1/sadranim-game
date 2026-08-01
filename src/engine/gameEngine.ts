@@ -136,6 +136,9 @@ export function convertAIToHuman(state: GameState, playerId: string): GameState 
 }
 
 export function drawFromPool(state: GameState): GameState {
+  // SAFETY GUARD: If player already has a tile in hand, CANNOT draw another tile!
+  if (state.drawnTile !== null) return state;
+
   let pool = [...state.drawPool];
   let allDiscarded = [...state.allDiscarded];
 
@@ -159,10 +162,8 @@ export function drawFromPool(state: GameState): GameState {
   if (currentPlayer.hasPushPlaceholder) {
     actionPhase = 'PUSH_RESOLVE';
   } else if (tile.type === 'SWITCH') {
-    // Step 1: Select target tile on neighbour shelf FIRST
     actionPhase = 'SWITCH_SELECT_TARGET';
   } else if (tile.type === 'PUSH') {
-    // Step 1: Select target tile on neighbour shelf FIRST
     actionPhase = 'PUSH_SELECT_TARGET';
   }
 
@@ -181,6 +182,9 @@ export function drawFromPool(state: GameState): GameState {
 }
 
 export function drawFromNeighbourDiscard(state: GameState): GameState {
+  // SAFETY GUARD: If player already has a tile in hand, CANNOT draw another tile!
+  if (state.drawnTile !== null) return state;
+
   const players = state.players.map(p => ({ ...p, discardPile: [...p.discardPile] }));
   const prevIdx = getPreviousPlayerIndex(state);
   
@@ -239,13 +243,11 @@ export function placeTileOnShelf(state: GameState, slotIndex: number): GameState
 
   player.shelf[slotIndex] = tileToPlace;
 
-  // When resolving PUSH, clear the placeholder and discard the used PUSH tile
   if (state.actionPhase === 'PUSH_RESOLVE' && player.hasPushPlaceholder) {
     player.hasPushPlaceholder = false;
     player.pushSlotIndex = null;
   }
 
-  // The displaced tile is added to discard pile (if not a push placeholder)
   if (displaced && displaced.type !== 'PUSH') {
     player.discardPile = [{ ...displaced }, ...player.discardPile];
   }
@@ -298,11 +300,6 @@ export function discardDrawnTile(state: GameState): GameState {
   return advanceTurn({ ...state, players, drawnTile: null, drawnFromDiscard: false, actionPhase: 'IDLE' as ActionPhase });
 }
 
-/**
- * SWITCH Action Execution:
- * Swaps a selected tile from neighbour shelf with a selected tile from own shelf.
- * The played SWITCH tile is removed/discarded to the player's discard pile.
- */
 export function executeSwitchAction(state: GameState, ownSlot: number, targetId: string, targetSlot: number): GameState {
   const players = state.players.map(p => ({ ...p, shelf: [...p.shelf], discardPile: [...p.discardPile] }));
   const cur = players[state.currentTurnIndex];
@@ -316,7 +313,6 @@ export function executeSwitchAction(state: GameState, ownSlot: number, targetId:
   cur.shelf[ownSlot] = targetTile;
   tgt.shelf[targetSlot] = ownTile;
 
-  // Discard the played SWITCH tile so it is removed from active use
   if (state.drawnTile) {
     cur.discardPile = [{ ...state.drawnTile }, ...cur.discardPile];
   }
@@ -337,11 +333,6 @@ export function executeSwitchAction(state: GameState, ownSlot: number, targetId:
   });
 }
 
-/**
- * PUSH Action Execution:
- * Places the PUSH tile onto the target slot of the relevant neighbour's shelf.
- * Displaces the neighbour's existing tile to that neighbour's discard pile.
- */
 export function executePushAction(state: GameState, targetId: string, targetSlot: number): GameState {
   const players = state.players.map(p => ({ ...p, shelf: [...p.shelf], discardPile: [...p.discardPile] }));
   const cur = players[state.currentTurnIndex];

@@ -24,11 +24,6 @@ export const DrawPool: React.FC<DrawPoolProps> = ({
   const prevNeighbour = state.players[prevNeighbourIdx];
   const topDiscard = prevNeighbour?.discardPile?.[0];
 
-  // If player just drew a tile from the neighbour's discard pile, display that EXACT drawn tile
-  const activeDiscardTile = (state.drawnFromDiscard && state.drawnTile)
-    ? state.drawnTile
-    : topDiscard;
-
   const isDrawnInHand = state.drawnFromDiscard && !!state.drawnTile;
 
   return (
@@ -50,7 +45,7 @@ export const DrawPool: React.FC<DrawPoolProps> = ({
             <TileBack size="lg" />
           </div>
           <div className={disabled ? 'opacity-50' : 'opacity-100'}>
-            <TileBack size="lg" onClick={!disabled ? onDrawPool : undefined} />
+            <TileBack size="lg" />
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-yellow-300 text-xs font-bold bg-black/70 px-2 py-0.5 rounded-full border border-yellow-400/40 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -82,7 +77,7 @@ export const DrawPool: React.FC<DrawPoolProps> = ({
             </div>
           </div>
         ) : canDrawDiscard && topDiscard ? (
-          /* Show available neighbour discard tile with Take button */
+          /* Show available neighbour discard tile with single outer click handler */
           <motion.div
             className="cursor-pointer relative group"
             whileHover={!disabled ? { scale: 1.08 } : {}}
@@ -93,7 +88,6 @@ export const DrawPool: React.FC<DrawPoolProps> = ({
               tile={topDiscard}
               size="lg"
               highlighted
-              onClick={!disabled ? onDrawDiscard : undefined}
             />
             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-yellow-400 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-full shadow border border-yellow-300 opacity-90 group-hover:opacity-100">
               קח
